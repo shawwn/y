@@ -1,8 +1,10 @@
 ;;; -*- lexical-binding: t -*-
 
 (eval-when-compile
-  (save-buffer)
-  (let* ((path (or load-file-name (buffer-file-name)))
+  ;; (save-buffer)
+  (defvar y-module nil)
+  (let* ((y-module "y")
+	 (path (or load-file-name (buffer-file-name)))
 	 (name (file-name-base path))
 	 (dir (file-name-directory path))
 	 (file (expand-file-name (concat "bin/" name ".el") dir)))
@@ -121,22 +123,23 @@
 
 (defvar y-environment (list (make-hash-table :test 'equal)))
 
-(defun y-setenv (k &rest keys)
-  (let* ((i (if (y-get keys :toplevel) 0 (- (y-length y-environment) 1)))
-	 (frame (y-get y-environment i))
-	 (entry (y-get frame k)))
-    (y-%for keys k v
-      (y-set (y-get entry k) v))
-    (y-set (y-get frame k) entry)))
+(y-do
+  (define-global setenv (k &rest keys)
+    (let* ((i (if (y-get keys :toplevel) 0 (- (y-length y-environment) 1)))
+	   (frame (y-get y-environment i))
+	   (entry (y-get frame k)))
+      (y-%for keys k v
+	(y-set (y-get entry k) v))
+      (y-set (y-get frame k) entry)))
 
-(defun y-getenv (k &optional p)
-  (let ((i (- (y-length y-environment) 1)))
-    (catch 'y-break
-      (while (>= i 0)
-	(let ((b (y-get (y-get y-environment 0) k)))
-	  (if b
-	      (throw 'y-break (if p (y-get b p) b))
-	    (decf i)))))))
+  (define-global getenv (k &optional p)
+    (let ((i (- (y-length y-environment) 1)))
+      (catch 'y-break
+	(while (>= i 0)
+	  (let ((b (y-get (y-get y-environment 0) k)))
+	    (if b
+		(throw 'y-break (if p (y-get b p) b))
+	      (decf i))))))))
 
 (defun y-symbol-expansion (k)
   (y-getenv k :symbol))
@@ -189,9 +192,12 @@
 (defmacro y-do (&rest body)
   (macroexpand-all (y-macroexpand `(progn ,@body))))
 
+(defvar y-module nil)
+
 (defun y-module-name ()
-  (let ((file (or load-file-name (buffer-file-name))))
-    (if file (file-name-base file) (buffer-name))))
+ (or y-module
+     (let ((file (or load-file-name (buffer-file-name))))
+       (if file (file-name-base file) (buffer-name)))))
 
 (y-do
  (define-macro fn (args &rest body)
@@ -199,20 +205,20 @@
       (y-do ,@body)))
 
  (define-macro define-macro (name args &rest body)
-   (let ((form `(y-setenv ',name :macro (fn ,args ,@body))))
+   (let ((form `(setenv ',name :macro (fn ,args ,@body))))
      (y-eval form)
      form))
 
  (define-macro define (name x &rest body)
    (let ((var (y-id (concat (y-module-name) "--" (symbol-name name)))))
-     (y-setenv name :symbol var)
-     (y-setenv var :variable t)
+     (setenv name :symbol var)
+     (setenv var :variable t)
      `(defalias ',var (fn ,x ,@body))))
 
  (define-macro define-global (name x &rest body)
    (let ((var (y-id (concat (y-module-name) "-" (symbol-name name)))))
-     (y-setenv name :symbol var)
-     (y-setenv var :variable t :toplevel t)
+     (setenv name :symbol var)
+     (setenv var :variable t :toplevel t)
      `(defalias ',var (fn ,x ,@body))))
 )
 

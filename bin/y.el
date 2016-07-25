@@ -312,9 +312,11 @@
   (defvar y-environment
     (list
       (make-hash-table :test 'equal)))
-  (defalias 'y-setenv
-    #'(lambda
-        (k &rest keys)
+  (progn
+(defalias 'y-setenv
+  #'(lambda
+      (k &rest keys)
+      (progn
         (let*
           ((i
             (if
@@ -364,10 +366,11 @@
             (progn
               (setq frame
                     (y-put frame i v))
-              v)))))
-  (defalias 'y-getenv
-    #'(lambda
-        (k &optional p)
+              v))))))
+(defalias 'y-getenv
+  #'(lambda
+      (k &optional p)
+      (progn
         (let
           ((i
             (-
@@ -387,7 +390,7 @@
                                (y-get b p)
                                b))
                     (setq i
-                          (1- i)))))))))
+                          (1- i)))))))))))
   (defalias 'y-symbol-expansion
     #'(lambda
         (k)
@@ -501,15 +504,17 @@
               (macroexpand-all
                (y-macroexpand
                 (cons 'progn body))))))
+  (defvar y-module nil)
   (defalias 'y-module-name
     #'(lambda nil
-        (let
-          ((file
-            (or load-file-name
-                (buffer-file-name))))
-          (if file
-              (file-name-base file)
-              (buffer-name)))))
+        (or y-module
+            (let
+              ((file
+                (or load-file-name
+                    (buffer-file-name))))
+              (if file
+                  (file-name-base file)
+                  (buffer-name))))))
   (progn
     (y-setenv 'fn :macro
               #'(lambda
@@ -527,7 +532,7 @@
                   (progn
                     (let
                       ((form
-                         (list 'y-setenv
+                         (list 'setenv
                                (list 'quote name)
                                ':macro
                                (cons 'fn
