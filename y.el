@@ -9,16 +9,15 @@
 	 (dir (file-name-directory path))
 	 (file (expand-file-name (concat "bin/" name ".el") dir)))
     (load-file file)
-    (unless load-file-name
-      (let* ((forms (with-temp-buffer
-		      (insert-file-contents-literally path)
-		      (car (read-from-string (concat "(" (buffer-string) ")"))))))
-	(with-temp-buffer
-	  (insert ";;; -*- lexical-binding: t -*-\n")
-	  (insert (with-output-to-string
-		    (pp (funcall 'y-expand `(progn ,@(cdr forms))))))
-	  (untabify (point-min) (point-max))
-	  (write-file file))))
+    (let* ((forms (with-temp-buffer
+		    (insert-file-contents-literally path)
+		    (car (read-from-string (concat "(" (buffer-string) ")"))))))
+      (with-temp-buffer
+	(insert ";;; -*- lexical-binding: t -*-\n")
+	(insert (with-output-to-string
+		  (pp (funcall 'y-expand `(progn ,@(cdr forms))))))
+	(untabify (point-min) (point-max))
+	(write-file file)))
     nil))
 
 (setq-local lexical-binding t)
@@ -110,36 +109,41 @@
 	(+ n 1))
     (length h)))
 
-(defvar y-environment (list (make-hash-table :test 'equal)))
-
 (y-do
+ (defvar y-environment (list (make-hash-table :test 'equal)))
+
  (define-global setenv (k &rest keys)
-   (let* ((i (if (y-get keys :toplevel) 0 (- (y-length y-environment) 1)))
-	  (frame (y-get y-environment i))
-	  (entry (y-get frame k)))
+   (let* ((i (if (get keys :toplevel) 0 (- (\# environment) 1)))
+	  (frame (get environment i))
+	  (entry (get frame k)))
      (y-%for keys k v
-       (y-set (y-get entry k) v))
-     (y-set (y-get frame k) entry)))
+       (set (get entry k) v))
+     (set (get frame k) entry)))
 
  (define-global getenv (k &optional p)
-   (let ((i (- (y-length y-environment) 1)))
+   (let ((i (- (\# environment) 1)))
      (catch 'y-break
        (while (>= i 0)
-	 (let ((b (y-get (y-get y-environment 0) k)))
+	 (let ((b (get (get environment 0) k)))
 	   (if b
-		(throw 'y-break (if p (y-get b p) b))
+		(throw 'y-break (if p (get b p) b))
 	      (decf i)))))))
 
+ (define-symbol get y-get)
+ (define-symbol set y-set)
+ (define-symbol environment y-environment)
+ (define-symbol \# y-length)
+
  (define-global edge (x)
-   (- (y-length x) 1))
+   (- (\# x) 1))
 
  (define id (x)
    (let ((s (append (if (symbolp x) (symbol-name x) x) nil)))
-     (when (eq ?? (y-get s (edge s)))
+     (when (eq ?? (get s (edge s)))
        (if (memq ?- s)
-	    (progn (y-set (y-get s (edge s)) ?-)
-		   (y-set (y-get s (y-length s)) ?p))
-	  (y-set (y-get s (edge s)) ?p)))
+	    (progn (set (get s (edge s)) ?-)
+		   (set (get s (\# s)) ?p))
+	  (set (get s (edge s)) ?p)))
      (intern (concat s))))
 
  (defvar y-module nil)
@@ -188,11 +192,11 @@
    (if (symbol? form)
 	(macroexpand (symbol-expansion form))
       (if (atom form) form
-	(let ((x (macroexpand (y-get form 0))))
+	(let ((x (macroexpand (get form 0))))
 	  (if (eq x 'quote)
 	      form
 	    (if (eq x '\`)
-		(quasiexpand (y-get form 1))
+		(quasiexpand (get form 1))
 	      (if (macro? x)
 		  (macroexpand (apply (macro-function x) (cdr form)))
 		(mapcar 'y-macroexpand form))))))))
@@ -211,6 +215,10 @@
    (let ((form `(setenv ',name :macro (fn ,args ,@body))))
      (eval form)
      form))
+
+ (define-macro define-symbol (name expansion)
+   (setenv name :symbol expansion)
+   `(setenv ',name :symbol ',expansion))
 
  (define-macro define (name x &rest body)
    (let ((var (global-id (concat (module-name) "--") name)))

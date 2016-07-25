@@ -259,10 +259,10 @@
               nil)
             (+ n 1))
           (length h))))
-  (defvar y-environment
-    (list
-      (make-hash-table :test 'equal)))
   (progn
+(defvar y-environment
+  (list
+    (make-hash-table :test 'equal)))
 (defalias 'y-setenv
   #'(lambda
       (k &rest keys)
@@ -341,6 +341,10 @@
                                b))
                     (setq i
                           (1- i))))))))))
+(y-setenv 'get :symbol 'y-get)
+(y-setenv 'set :symbol 'y-set)
+(y-setenv 'environment :symbol 'y-environment)
+(y-setenv '\# :symbol 'y-length)
 (defalias 'y-edge
   #'(lambda
       (x)
@@ -560,6 +564,15 @@
                                  (cons args body)))))
                   (y-eval form)
                   form))))
+(y-setenv 'define-symbol :macro
+          #'(lambda
+              (name expansion)
+              (progn
+                (y-setenv name :symbol expansion)
+                (list 'setenv
+                      (list 'quote name)
+                      ':symbol
+                      (list 'quote expansion)))))
 (y-setenv 'define :macro
           #'(lambda
               (name x &rest body)
