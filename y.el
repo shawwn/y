@@ -1,6 +1,6 @@
 ;;; -*- lexical-binding: t -*-
 
-(eval-when-compile
+(eval-and-compile
   ;; (save-buffer)
   (defvar y-module nil)
   (let* ((y-module "y")
@@ -9,15 +9,16 @@
 	 (dir (file-name-directory path))
 	 (file (expand-file-name (concat "bin/" name ".el") dir)))
     (load-file file)
-    (let* ((forms (with-temp-buffer
-    		    (insert-file-contents-literally path)
-    		    (car (read-from-string (concat "(" (buffer-string) ")"))))))
-      (with-temp-buffer
-    	(insert ";;; -*- lexical-binding: t -*-\n")
-    	(insert (with-output-to-string
-    		  (pp (y-expand `(progn ,@(cdr forms))))))
-	(untabify (point-min) (point-max))
-    	(write-file file)))
+    (unless load-file-name
+      (let* ((forms (with-temp-buffer
+		      (insert-file-contents-literally path)
+		      (car (read-from-string (concat "(" (buffer-string) ")"))))))
+	(with-temp-buffer
+	  (insert ";;; -*- lexical-binding: t -*-\n")
+	  (insert (with-output-to-string
+		    (pp (funcall 'y-expand `(progn ,@(cdr forms))))))
+	  (untabify (point-min) (point-max))
+	  (write-file file))))
     nil))
 
 (setq-local lexical-binding t)
@@ -57,7 +58,7 @@
 (defmacro y-set (a &optional b)
   `(setf ,a ,b))
 
-(defsubst y-get (h k)
+(defun y-get (h k)
   (declare (gv-expander
 	    (lambda (f)
 	      (gv-letplace (getter setter) h
@@ -109,95 +110,102 @@
 	(+ n 1))
     (length h)))
 
-(defun y-edge (x)
-  (- (y-length x) 1))
-
-(defun y-id (id)
-  (let ((s (append (if (symbolp id) (symbol-name id) id) nil)))
-    (when (eq ?? (y-get s (y-edge s)))
-      (if (memq ?- s)
-	  (progn (y-set (y-get s (y-edge s)) ?-)
-		 (y-set (y-get s (y-length s)) ?p))
-	(y-set (y-get s (y-edge s)) ?p)))
-    (intern (concat s))))
-
 (defvar y-environment (list (make-hash-table :test 'equal)))
 
 (y-do
-  (define-global setenv (k &rest keys)
-    (let* ((i (if (y-get keys :toplevel) 0 (- (y-length y-environment) 1)))
-	   (frame (y-get y-environment i))
-	   (entry (y-get frame k)))
-      (y-%for keys k v
-	(y-set (y-get entry k) v))
-      (y-set (y-get frame k) entry)))
+ (define-global setenv (k &rest keys)
+   (let* ((i (if (y-get keys :toplevel) 0 (- (y-length y-environment) 1)))
+	  (frame (y-get y-environment i))
+	  (entry (y-get frame k)))
+     (y-%for keys k v
+       (y-set (y-get entry k) v))
+     (y-set (y-get frame k) entry)))
 
-  (define-global getenv (k &optional p)
-    (let ((i (- (y-length y-environment) 1)))
-      (catch 'y-break
-	(while (>= i 0)
-	  (let ((b (y-get (y-get y-environment 0) k)))
-	    (if b
+ (define-global getenv (k &optional p)
+   (let ((i (- (y-length y-environment) 1)))
+     (catch 'y-break
+       (while (>= i 0)
+	 (let ((b (y-get (y-get y-environment 0) k)))
+	   (if b
 		(throw 'y-break (if p (y-get b p) b))
-	      (decf i))))))))
+	      (decf i)))))))
 
-(defun y-symbol-expansion (k)
-  (y-getenv k :symbol))
+ (define-global edge (x)
+   (- (y-length x) 1))
 
-(defun y-symbol-p (k)
-  (let ((v (y-symbol-expansion k)))
-    (and v (not (eq v k)))))
+ (define id (x)
+   (let ((s (append (if (symbolp x) (symbol-name x) x) nil)))
+     (when (eq ?? (y-get s (edge s)))
+       (if (memq ?- s)
+	    (progn (y-set (y-get s (edge s)) ?-)
+		   (y-set (y-get s (y-length s)) ?p))
+	  (y-set (y-get s (edge s)) ?p)))
+     (intern (concat s))))
 
-(defun y-macro-function (k)
-  (y-getenv k :macro))
+ (defvar y-module nil)
 
-(defun y-macro-p (k)
-  (y-macro-function k))
+ (define module-name ()
+   (or y-module
+       (let ((file (or load-file-name (buffer-file-name))))
+	 (if file (file-name-base file) (buffer-name)))))
 
-(defun y-macroexpand (form)
-  (if (y-symbol-p form)
-      (y-macroexpand (y-symbol-expansion form))
-    (if (atom form) form
-      (let ((x (y-macroexpand (y-get form 0))))
-	(if (eq x 'quote)
-	    form
-	  (if (eq x '\`)
-	      (y-quasiexpand (y-get form 1))
-	    (if (y-macro-p x)
-		(y-macroexpand (apply (y-macro-function x) (cdr form)))
-	      (mapcar 'y-macroexpand form))))))))
+ (define global-id (prefix name)
+   (let ((s (if (stringp name) name (symbol-name name))))
+     (if (eq 0 (string-match (regexp-quote prefix) s))
+	  name
+	(id (concat prefix s)))))
 
-(defun y-expand (form)
-  (macroexpand-all (y-macroexpand form)))
+ (define symbol-expansion (k)
+   (getenv k :symbol))
 
-(defun y-eval (form)
-  (eval (y-expand form) t))
+ (define symbol? (k)
+   (let ((v (symbol-expansion k)))
+     (and v (not (eq v k)))))
 
-(defun y-quasiexpand (form)
-  (list '\` (y-quasiexpand-1 form 1)))
+ (define macro-function (k)
+   (getenv k :macro))
 
-(defun y-quasiexpand-1 (x depth)
-  (cond ((= depth 0)
-	 (y-macroexpand x))
-	((and (consp x) (eq (car x) '\,))
-	 (list '\, (y-quasiexpand-1 (cadr x) (- depth 1))))
-	((and (consp x) (eq (car x) '\,@) (= depth 1))
-	 (list '\,@ (y-quasiexpand-1 (cadr x) (- depth 1))))
-	((and (consp x) (eq (car x) '\`))
-	 (list '\` (y-quasiexpand-1 (cadr x) (+ depth 1))))
-	((consp x)
-	 (mapcar (lambda (form) (y-quasiexpand-1 form depth)) x))
-	(t x)))
+ (define macro? (k)
+   (macro-function k))
+
+ (define quasiexpand-1 (x depth)
+   (cond ((= depth 0)
+	  (macroexpand x))
+	 ((and (consp x) (eq (car x) '\,))
+	  (list '\, (quasiexpand-1 (cadr x) (- depth 1))))
+	 ((and (consp x) (eq (car x) '\,@) (= depth 1))
+	  (list '\,@ (quasiexpand-1 (cadr x) (- depth 1))))
+	 ((and (consp x) (eq (car x) '\`))
+	  (list '\` (quasiexpand-1 (cadr x) (+ depth 1))))
+	 ((consp x)
+	  (mapcar (lambda (form) (quasiexpand-1 form depth)) x))
+	 (t x)))
+
+ (define quasiexpand (form)
+   (list '\` (quasiexpand-1 form 1)))
+
+ (define-global macroexpand (form)
+   (if (symbol? form)
+	(macroexpand (symbol-expansion form))
+      (if (atom form) form
+	(let ((x (macroexpand (y-get form 0))))
+	  (if (eq x 'quote)
+	      form
+	    (if (eq x '\`)
+		(quasiexpand (y-get form 1))
+	      (if (macro? x)
+		  (macroexpand (apply (macro-function x) (cdr form)))
+		(mapcar 'y-macroexpand form))))))))
+
+ (define-global expand (form)
+   (macroexpand-all (macroexpand form)))
+
+ (define-global eval (form)
+   (funcall 'eval (expand form) t))
+)
 
 (defmacro y-do (&rest body)
   (macroexpand-all (y-macroexpand `(progn ,@body))))
-
-(defvar y-module nil)
-
-(defun y-module-name ()
- (or y-module
-     (let ((file (or load-file-name (buffer-file-name))))
-       (if file (file-name-base file) (buffer-name)))))
 
 (y-do
  (define-macro fn (args &rest body)
@@ -206,17 +214,17 @@
 
  (define-macro define-macro (name args &rest body)
    (let ((form `(setenv ',name :macro (fn ,args ,@body))))
-     (y-eval form)
+     (eval form)
      form))
 
  (define-macro define (name x &rest body)
-   (let ((var (y-id (concat (y-module-name) "--" (symbol-name name)))))
+   (let ((var (global-id (concat (module-name) "--") name)))
      (setenv name :symbol var)
      (setenv var :variable t)
      `(defalias ',var (fn ,x ,@body))))
 
  (define-macro define-global (name x &rest body)
-   (let ((var (y-id (concat (y-module-name) "-" (symbol-name name)))))
+   (let ((var (global-id (concat (module-name) "-") name)))
      (setenv name :symbol var)
      (setenv var :variable t :toplevel t)
      `(defalias ',var (fn ,x ,@body))))

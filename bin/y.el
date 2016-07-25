@@ -94,7 +94,6 @@
               (a &optional b)
               (list 'setf a b))))
   (prog1
-      (prog1
 (defalias 'y-get
   #'(lambda
       (h k)
@@ -148,7 +147,6 @@
                            `(progn ,(funcall setter
                                              `(y-put ,getter ,i ,v))
                                    ,v)))))))))
-    'byte-compile-inline-expand)
   (defalias 'y-put
     #'(lambda
         (h k &optional v)
@@ -261,54 +259,6 @@
               nil)
             (+ n 1))
           (length h))))
-  (defalias 'y-edge
-    #'(lambda
-        (x)
-        (-
-         (y-length x)
-         1)))
-  (defalias 'y-id
-    #'(lambda
-        (id)
-        (let
-          ((s
-            (append
-             (if
-               (symbolp id)
-               (symbol-name id)
-               id)
-             nil)))
-          (if
-            (eq 63
-                (y-get s
-                       (y-edge s)))
-            (progn
-              (if
-                (memq 45 s)
-                (progn
-                  (let*
-                    ((i
-                      (y-edge s)))
-                    (progn
-                      (setq s
-                            (y-put s i 45))
-                      45))
-                  (let*
-                    ((i
-                      (y-length s)))
-                    (progn
-                      (setq s
-                            (y-put s i 112))
-                      112)))
-                (let*
-                  ((i
-                    (y-edge s)))
-                  (progn
-                    (setq s
-                          (y-put s i 112))
-                    112)))))
-          (intern
-           (concat s)))))
   (defvar y-environment
     (list
       (make-hash-table :test 'equal)))
@@ -390,35 +340,169 @@
                                (y-get b p)
                                b))
                     (setq i
-                          (1- i)))))))))))
-  (defalias 'y-symbol-expansion
-    #'(lambda
-        (k)
-        (y-getenv k :symbol)))
-  (defalias 'y-symbol-p
-    #'(lambda
-        (k)
+                          (1- i))))))))))
+(defalias 'y-edge
+  #'(lambda
+      (x)
+      (progn
+        (-
+         (y-length x)
+         1))))
+(defalias 'y--id
+  #'(lambda
+      (x)
+      (progn
+        (let
+          ((s
+            (append
+             (if
+               (symbolp x)
+               (symbol-name x)
+               x)
+             nil)))
+          (if
+            (eq 63
+                (y-get s
+                       (y-edge s)))
+            (progn
+              (if
+                (memq 45 s)
+                (progn
+                  (let*
+                    ((i
+                      (y-edge s)))
+                    (progn
+                      (setq s
+                            (y-put s i 45))
+                      45))
+                  (let*
+                    ((i
+                      (y-length s)))
+                    (progn
+                      (setq s
+                            (y-put s i 112))
+                      112)))
+                (let*
+                  ((i
+                    (y-edge s)))
+                  (progn
+                    (setq s
+                          (y-put s i 112))
+                    112)))))
+          (intern
+           (concat s))))))
+(defvar y-module nil)
+(defalias 'y--module-name
+  #'(lambda
+      (&rest nil)
+      (progn
+        (or y-module
+            (let
+              ((file
+                (or load-file-name
+                    (buffer-file-name))))
+              (if file
+                  (file-name-base file)
+                  (buffer-name)))))))
+(defalias 'y--global-id
+  #'(lambda
+      (prefix name)
+      (progn
+        (let
+          ((s
+            (if
+              (stringp name)
+              name
+              (symbol-name name))))
+          (if
+            (eq 0
+                (string-match
+                 (regexp-quote prefix)
+                 s))
+            name
+            (y--id
+             (concat prefix s)))))))
+(defalias 'y--symbol-expansion
+  #'(lambda
+      (k)
+      (progn
+        (y-getenv k :symbol))))
+(defalias 'y--symbol-p
+  #'(lambda
+      (k)
+      (progn
         (let
           ((v
-            (y-symbol-expansion k)))
+            (y--symbol-expansion k)))
           (and v
                (not
-                (eq v k))))))
-  (defalias 'y-macro-function
-    #'(lambda
-        (k)
-        (y-getenv k :macro)))
-  (defalias 'y-macro-p
-    #'(lambda
-        (k)
-        (y-macro-function k)))
-  (defalias 'y-macroexpand
-    #'(lambda
-        (form)
+                (eq v k)))))))
+(defalias 'y--macro-function
+  #'(lambda
+      (k)
+      (progn
+        (y-getenv k :macro))))
+(defalias 'y--macro-p
+  #'(lambda
+      (k)
+      (progn
+        (y--macro-function k))))
+(defalias 'y--quasiexpand-1
+  #'(lambda
+      (x depth)
+      (progn
+        (cond
+          ((= depth 0)
+           (y-macroexpand x))
+          ((and
+            (consp x)
+            (eq
+             (car x)
+             '\,))
+           (list '\,
+                 (y--quasiexpand-1
+                  (cadr x)
+                  (- depth 1))))
+          ((and
+            (consp x)
+            (eq
+             (car x)
+             '\,@)
+            (= depth 1))
+           (list '\,@
+                 (y--quasiexpand-1
+                  (cadr x)
+                  (- depth 1))))
+          ((and
+            (consp x)
+            (eq
+             (car x)
+             '\`))
+           (list '\`
+                 (y--quasiexpand-1
+                  (cadr x)
+                  (+ depth 1))))
+          ((consp x)
+           (mapcar
+            #'(lambda
+                (form)
+                (y--quasiexpand-1 form depth))
+            x))
+          (t x)))))
+(defalias 'y--quasiexpand
+  #'(lambda
+      (form)
+      (progn
+        (list '\`
+              (y--quasiexpand-1 form 1)))))
+(defalias 'y-macroexpand
+  #'(lambda
+      (form)
+      (progn
         (if
-          (y-symbol-p form)
+          (y--symbol-p form)
           (y-macroexpand
-           (y-symbol-expansion form))
+           (y--symbol-expansion form))
           (if
             (atom form)
             form
@@ -431,72 +515,28 @@
                 form
                 (if
                   (eq x '\`)
-                  (y-quasiexpand
+                  (y--quasiexpand
                    (y-get form 1))
                   (if
-                    (y-macro-p x)
+                    (y--macro-p x)
                     (y-macroexpand
                      (apply
-                      (y-macro-function x)
+                      (y--macro-function x)
                       (cdr form)))
-                    (mapcar 'y-macroexpand form)))))))))
-  (defalias 'y-expand
-    #'(lambda
-        (form)
+                    (mapcar 'y-macroexpand form))))))))))
+(defalias 'y-expand
+  #'(lambda
+      (form)
+      (progn
         (macroexpand-all
-         (y-macroexpand form))))
-  (defalias 'y-eval
-    #'(lambda
-        (form)
-        (eval
-         (y-expand form)
-         t)))
-  (defalias 'y-quasiexpand
-    #'(lambda
-        (form)
-        (list '\`
-              (y-quasiexpand-1 form 1))))
-  (defalias 'y-quasiexpand-1
-    #'(lambda
-        (x depth)
-        (cond
-          ((= depth 0)
-           (y-macroexpand x))
-          ((and
-            (consp x)
-            (eq
-             (car x)
-             '\,))
-           (list '\,
-                 (y-quasiexpand-1
-                  (cadr x)
-                  (- depth 1))))
-          ((and
-            (consp x)
-            (eq
-             (car x)
-             '\,@)
-            (= depth 1))
-           (list '\,@
-                 (y-quasiexpand-1
-                  (cadr x)
-                  (- depth 1))))
-          ((and
-            (consp x)
-            (eq
-             (car x)
-             '\`))
-           (list '\`
-                 (y-quasiexpand-1
-                  (cadr x)
-                  (+ depth 1))))
-          ((consp x)
-           (mapcar
-            #'(lambda
-                (form)
-                (y-quasiexpand-1 form depth))
-            x))
-          (t x))))
+         (y-macroexpand form)))))
+(defalias 'y-eval
+  #'(lambda
+      (form)
+      (progn
+        (funcall 'eval
+                 (y-expand form)
+                 t)))))
   (defalias 'y-do
     (cons 'macro
           #'(lambda
@@ -504,17 +544,6 @@
               (macroexpand-all
                (y-macroexpand
                 (cons 'progn body))))))
-  (defvar y-module nil)
-  (defalias 'y-module-name
-    #'(lambda nil
-        (or y-module
-            (let
-              ((file
-                (or load-file-name
-                    (buffer-file-name))))
-              (if file
-                  (file-name-base file)
-                  (buffer-name))))))
   (progn
     (y-setenv 'fn :macro
               #'(lambda
@@ -545,11 +574,11 @@
                   (progn
                     (let
                       ((var
-                        (y-id
+                        (y--global-id
                          (concat
-                          (y-module-name)
-                          "--"
-                          (symbol-name name)))))
+                          (y--module-name)
+                          "--")
+                         name)))
                       (y-setenv name :symbol var)
                       (y-setenv var :variable t)
                       (list 'defalias
@@ -562,11 +591,11 @@
                   (progn
                     (let
                       ((var
-                        (y-id
+                        (y--global-id
                          (concat
-                          (y-module-name)
-                          "-"
-                          (symbol-name name)))))
+                          (y--module-name)
+                          "-")
+                         name)))
                       (y-setenv name :symbol var)
                       (y-setenv var :variable t :toplevel t)
                       (list 'defalias
