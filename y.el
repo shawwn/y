@@ -14,6 +14,7 @@
     	(insert ";;; -*- lexical-binding: t -*-\n")
     	(insert (with-output-to-string
     		  (pp (y-expand `(progn ,@(cdr forms))))))
+	(untabify (point-min) (point-max))
     	(write-file file)))
     nil))
 
