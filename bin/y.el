@@ -397,8 +397,7 @@
            (concat s))))))
 (defvar y-module nil)
 (defalias 'y--module-name
-  #'(lambda
-      (&rest nil)
+  #'(lambda nil
       (progn
         (or y-module
             (let
@@ -547,7 +546,8 @@
               (progn
                 (list 'lambda
                       (if
-                        (atom args)
+                        (not
+                         (listp args))
                         (list '&rest args)
                         args)
                       (cons 'y-do body)))))

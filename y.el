@@ -208,7 +208,7 @@
    (funcall 'eval (expand form) t))
 
  (define-macro fn (args &rest body)
-   `(lambda ,(if (atom args) `(&rest ,args) args)
+   `(lambda ,(if (not (listp args)) `(&rest ,args) args)
       (y-do ,@body)))
 
  (define-macro define-macro (name args &rest body)
