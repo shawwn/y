@@ -1,7 +1,7 @@
 ;;; -*- lexical-binding: t -*-
 
 (eval-when-compile
-  ;; (save-buffer)
+  (save-buffer)
   (let* ((path (or load-file-name (buffer-file-name)))
 	 (name (file-name-base path))
 	 (dir (file-name-directory path))
@@ -99,11 +99,25 @@
       l)))
 
 (defun y-length (h)
-  (let ((n -1))
-    (y-%for h k v
-      (when (integerp k)
-	(setq n (max n k))))
-    (+ n 1)))
+  (if (listp h)
+      (let ((n -1))
+	(y-%for h k v
+	  (when (integerp k)
+	    (setq n (max n k))))
+	(+ n 1))
+    (length h)))
+
+(defun y-edge (x)
+  (- (y-length x) 1))
+
+(defun y-id (id)
+  (let ((s (append (if (symbolp id) (symbol-name id) id) nil)))
+    (when (eq ?? (y-get s (y-edge s)))
+      (if (memq ?- s)
+	  (progn (y-set (y-get s (y-edge s)) ?-)
+		 (y-set (y-get s (y-length s)) ?p))
+	(y-set (y-get s (y-edge s)) ?p)))
+    (intern (concat s))))
 
 (defvar y-environment (list (make-hash-table :test 'equal)))
 
@@ -128,7 +142,8 @@
   (y-getenv k :symbol))
 
 (defun y-symbol-p (k)
-  (y-symbol-expansion k))
+  (let ((v (y-symbol-expansion k)))
+    (and v (not (eq v k)))))
 
 (defun y-macro-function (k)
   (y-getenv k :macro))
@@ -174,6 +189,10 @@
 (defmacro y-do (&rest body)
   (macroexpand-all (y-macroexpand `(progn ,@body))))
 
+(defun y-module-name ()
+  (let ((file (or load-file-name (buffer-file-name))))
+    (if file (file-name-base file) (buffer-name))))
+
 (y-do
  (define-macro fn (args &rest body)
    `(lambda ,(if (atom args) `(&rest ,args) args)
@@ -182,7 +201,20 @@
  (define-macro define-macro (name args &rest body)
    (let ((form `(y-setenv ',name :macro (fn ,args ,@body))))
      (y-eval form)
-     form)))
+     form))
+
+ (define-macro define (name x &rest body)
+   (let ((var (y-id (concat (y-module-name) "--" (symbol-name name)))))
+     (y-setenv name :symbol var)
+     (y-setenv var :variable t)
+     `(defalias ',var (fn ,x ,@body))))
+
+ (define-macro define-global (name x &rest body)
+   (let ((var (y-id (concat (y-module-name) "-" (symbol-name name)))))
+     (y-setenv name :symbol var)
+     (y-setenv var :variable t :toplevel t)
+     `(defalias ',var (fn ,x ,@body))))
+)
 
 (provide 'y)
  

@@ -10,21 +10,21 @@
                 (list 'lexical-binding)))
     nil)
   (let
-      ((h
-        (make-hash-table :test 'eq)))
+    ((h
+      (make-hash-table :test 'eq)))
     (defalias 'y-unique
       #'(lambda
           (&optional x)
           (let*
-              ((s
-                (or x 'gs))
-               (n
-                (gethash s h 0))
-               (s1
-                (make-symbol
-                 (format "%s%d"
-                         (symbol-name s)
-                         n))))
+            ((s
+              (or x 'gs))
+             (n
+              (gethash s h 0))
+             (s1
+              (make-symbol
+               (format "%s%d"
+                       (symbol-name s)
+                       n))))
             (puthash s
                      (+ n 1)
                      h)
@@ -47,39 +47,39 @@
     #'(lambda
         (h)
         (if
-            (keywordp
-             (car h))
-            (cddr h)
+          (keywordp
+           (car h))
+          (cddr h)
           (cdr h))))
   (defalias 'y-%for
     (cons 'macro
           #'(lambda
               (h k v &rest body)
               (let
-                  ((i
-                    (y-unique 'i)))
+                ((i
+                  (y-unique 'i)))
                 (cons 'let
                       (cons
                        (list
-                        (cons i
-                              '(-1)))
+                         (cons i
+                               '(-1)))
                        (cons
                         (list 'while h
                               (cons 'let
                                     (cons
                                      (list
-                                      (list k
-                                            (list 'if
-                                                  (list 'keywordp
-                                                        (list 'car h))
-                                                  (list 'car h)
-                                                  (list 'incf i)))
-                                      (list v
-                                            (list 'if
-                                                  (list 'keywordp
-                                                        (list 'car h))
-                                                  (list 'cadr h)
-                                                  (list 'car h))))
+                                       (list k
+                                             (list 'if
+                                                   (list 'keywordp
+                                                         (list 'car h))
+                                                   (list 'car h)
+                                                   (list 'incf i)))
+                                       (list v
+                                             (list 'if
+                                                   (list 'keywordp
+                                                         (list 'car h))
+                                                   (list 'cadr h)
+                                                   (list 'car h))))
                                      body))
                               (list 'setq h
                                     (list 'if
@@ -95,222 +95,272 @@
               (list 'setf a b))))
   (prog1
       (prog1
-          (defalias 'y-get
-            #'(lambda
-                (h k)
-                (if
-                    (hash-table-p h)
-                    (gethash k h)
+(defalias 'y-get
+  #'(lambda
+      (h k)
+      (if
+        (hash-table-p h)
+        (gethash k h)
+        (if
+          (listp h)
+          (catch 'y-break
+            (let
+              ((i0 -1))
+              (while h
+                (let
+                  ((var
+                    (if
+                      (keywordp
+                       (car h))
+                      (car h)
+                      (setq i0
+                            (1+ i0))))
+                   (val
+                    (if
+                      (keywordp
+                       (car h))
+                      (cadr h)
+                      (car h))))
                   (if
-                      (listp h)
-                      (catch 'y-break
-                        (let
-                            ((i0 -1))
-                          (while h
-                            (let
-                                ((var
-                                  (if
-                                      (keywordp
-                                       (car h))
-                                      (car h)
-                                    (setq i0
-                                          (1+ i0))))
-                                 (val
-                                  (if
-                                      (keywordp
-                                       (car h))
-                                      (cadr h)
-                                    (car h))))
-                              (if
-                                  (eq var k)
-                                  (progn
-                                    (throw 'y-break val))))
-                            (setq h
-                                  (if
-                                      (keywordp
-                                       (car h))
-                                      (cddr h)
-                                    (cdr h))))
-                          nil))
-                    (elt h k)))))
-        (progn :autoload-end
-               '(closure
-                 (t)
-                 (f h k)
-                 (gv-letplace
-                     (getter setter)
-                     h
-                   (macroexp-let2 nil i k
-                     (funcall f
-                              `(y-get ,getter ,i)
-                              (lambda
-                                (val)
-                                (macroexp-let2 nil v val
-                                  `(progn ,(funcall setter
-                                                    `(y-put ,getter ,i ,v))
-                                          ,v)))))))))
+                    (eq var k)
+                    (progn
+                      (throw 'y-break val))))
+                (setq h
+                      (if
+                        (keywordp
+                         (car h))
+                        (cddr h)
+                        (cdr h))))
+              nil))
+          (elt h k)))))
+(progn :autoload-end
+       '(lambda
+          (f h k)
+          (gv-letplace
+              (getter setter)
+              h
+            (macroexp-let2 nil i k
+              (funcall f
+                       `(y-get ,getter ,i)
+                       (lambda
+                         (val)
+                         (macroexp-let2 nil v val
+                           `(progn ,(funcall setter
+                                             `(y-put ,getter ,i ,v))
+                                   ,v)))))))))
     'byte-compile-inline-expand)
   (defalias 'y-put
     #'(lambda
         (h k &optional v)
         (if
-            (hash-table-p h)
-            (progn
-              (puthash k v h)
-              h)
+          (hash-table-p h)
+          (progn
+            (puthash k v h)
+            h)
           (let
-              ((l h))
+            ((l h))
             (if
-                (listp h)
-                (catch 'y-break
-                  (if
-                      (or
-                       (keywordp k)
-                       (>= k 0))
+              (listp h)
+              (catch 'y-break
+                (if
+                  (or
+                   (keywordp k)
+                   (>= k 0))
+                  (progn
+                    (if
+                      (null l)
                       (progn
-                        (if
-                            (null l)
-                            (progn
-                              (setq l
-                                    (if
-                                        (keywordp k)
-                                        (list k nil)
-                                      (list nil)))
-                              (setq h l)))
+                        (setq l
+                              (if
+                                (keywordp k)
+                                (list k nil)
+                                (list nil)))
+                        (setq h l)))
+                    (let
+                      ((i1 -1))
+                      (while h
                         (let
-                            ((i1 -1))
-                          (while h
-                            (let
-                                ((var
-                                  (if
-                                      (keywordp
-                                       (car h))
-                                      (car h)
-                                    (setq i1
-                                          (1+ i1))))
-                                 (val
-                                  (if
-                                      (keywordp
-                                       (car h))
-                                      (cadr h)
-                                    (car h))))
+                          ((var
+                            (if
+                              (keywordp
+                               (car h))
+                              (car h)
+                              (setq i1
+                                    (1+ i1))))
+                           (val
+                            (if
+                              (keywordp
+                               (car h))
+                              (cadr h)
+                              (car h))))
+                          (if
+                            (eq var k)
+                            (progn
                               (if
-                                  (eq var k)
-                                  (progn
-                                    (if
-                                        (keywordp k)
-                                        (setcar
-                                         (cdr h)
-                                         v)
-                                      (setq h
-                                            (setcar h v)))
-                                    (throw 'y-break l)))
+                                (keywordp k)
+                                (setcar
+                                 (cdr h)
+                                 v)
+                                (setq h
+                                      (setcar h v)))
+                              (throw 'y-break l)))
+                          (if
+                            (null
+                             (y-next h))
+                            (progn
                               (if
-                                  (null
-                                   (y-next h))
-                                  (progn
-                                    (if
-                                        (keywordp k)
-                                        (nconc h
-                                               (list k v))
-                                      (nconc h
-                                             (list nil))))))
-                            (setq h
-                                  (if
-                                      (keywordp
-                                       (car h))
-                                      (cddr h)
-                                    (cdr h))))
-                          nil))))
+                                (keywordp k)
+                                (nconc h
+                                       (list k v))
+                                (nconc h
+                                       (list nil))))))
+                        (setq h
+                              (if
+                                (keywordp
+                                 (car h))
+                                (cddr h)
+                                (cdr h))))
+                      nil))))
               (aset h k v))
             l))))
   (defalias 'y-length
     #'(lambda
         (h)
-        (let
-            ((n -1))
+        (if
+          (listp h)
           (let
+            ((n -1))
+            (let
               ((i2 -1))
-            (while h
-              (let
+              (while h
+                (let
                   ((k
                     (if
-                        (keywordp
-                         (car h))
-                        (car h)
+                      (keywordp
+                       (car h))
+                      (car h)
                       (setq i2
                             (1+ i2))))
                    (v
                     (if
-                        (keywordp
-                         (car h))
-                        (cadr h)
+                      (keywordp
+                       (car h))
+                      (cadr h)
                       (car h))))
-                (if
+                  (if
                     (integerp k)
                     (progn
                       (setq n
                             (max n k)))))
-              (setq h
-                    (if
+                (setq h
+                      (if
                         (keywordp
                          (car h))
                         (cddr h)
-                      (cdr h))))
-            nil)
-          (+ n 1))))
+                        (cdr h))))
+              nil)
+            (+ n 1))
+          (length h))))
+  (defalias 'y-edge
+    #'(lambda
+        (x)
+        (-
+         (y-length x)
+         1)))
+  (defalias 'y-id
+    #'(lambda
+        (id)
+        (let
+          ((s
+            (append
+             (if
+               (symbolp id)
+               (symbol-name id)
+               id)
+             nil)))
+          (if
+            (eq 63
+                (y-get s
+                       (y-edge s)))
+            (progn
+              (if
+                (memq 45 s)
+                (progn
+                  (let*
+                    ((i
+                      (y-edge s)))
+                    (progn
+                      (setq s
+                            (y-put s i 45))
+                      45))
+                  (let*
+                    ((i
+                      (y-length s)))
+                    (progn
+                      (setq s
+                            (y-put s i 112))
+                      112)))
+                (let*
+                  ((i
+                    (y-edge s)))
+                  (progn
+                    (setq s
+                          (y-put s i 112))
+                    112)))))
+          (intern
+           (concat s)))))
   (defvar y-environment
     (list
-     (make-hash-table :test 'equal)))
+      (make-hash-table :test 'equal)))
   (defalias 'y-setenv
     #'(lambda
         (k &rest keys)
         (let*
-            ((i
-              (if
-                  (y-get keys :toplevel)
-                  0
-                (-
-                 (y-length y-environment)
-                 1)))
-             (frame
-              (y-get y-environment i))
-             (entry
-              (y-get frame k)))
+          ((i
+            (if
+              (y-get keys :toplevel)
+              0
+              (-
+               (y-length y-environment)
+               1)))
+           (frame
+            (y-get y-environment i))
+           (entry
+            (y-get frame k)))
           (let
-              ((i3 -1))
+            ((i3 -1))
             (while keys
               (let
-                  ((k
-                    (if
-                        (keywordp
-                         (car keys))
-                        (car keys)
-                      (setq i3
-                            (1+ i3))))
-                   (v
-                    (if
-                        (keywordp
-                         (car keys))
-                        (cadr keys)
-                      (car keys))))
+                ((k
+                  (if
+                    (keywordp
+                     (car keys))
+                    (car keys)
+                    (setq i3
+                          (1+ i3))))
+                 (v
+                  (if
+                    (keywordp
+                     (car keys))
+                    (cadr keys)
+                    (car keys))))
                 (let*
-                    ((i k)
-                     (v v))
+                  ((i k)
+                   (v v))
                   (progn
                     (setq entry
                           (y-put entry i v))
                     v)))
               (setq keys
                     (if
-                        (keywordp
-                         (car keys))
-                        (cddr keys)
+                      (keywordp
+                       (car keys))
+                      (cddr keys)
                       (cdr keys))))
             nil)
           (let*
-              ((i k)
-               (v entry))
+            ((i k)
+             (v entry))
             (progn
               (setq frame
                     (y-put frame i v))
@@ -319,25 +369,25 @@
     #'(lambda
         (k &optional p)
         (let
-            ((i
-              (-
-               (y-length y-environment)
-               1)))
+          ((i
+            (-
+             (y-length y-environment)
+             1)))
           (catch 'y-break
             (while
-                (>= i 0)
+              (>= i 0)
               (let
-                  ((b
-                    (y-get
-                     (y-get y-environment 0)
-                     k)))
+                ((b
+                  (y-get
+                   (y-get y-environment 0)
+                   k)))
                 (if b
                     (throw 'y-break
                            (if p
                                (y-get b p)
-                             b))
-                  (setq i
-                        (1- i)))))))))
+                               b))
+                    (setq i
+                          (1- i)))))))))
   (defalias 'y-symbol-expansion
     #'(lambda
         (k)
@@ -345,7 +395,12 @@
   (defalias 'y-symbol-p
     #'(lambda
         (k)
-        (y-symbol-expansion k)))
+        (let
+          ((v
+            (y-symbol-expansion k)))
+          (and v
+               (not
+                (eq v k))))))
   (defalias 'y-macro-function
     #'(lambda
         (k)
@@ -358,29 +413,29 @@
     #'(lambda
         (form)
         (if
-            (y-symbol-p form)
-            (y-macroexpand
-             (y-symbol-expansion form))
+          (y-symbol-p form)
+          (y-macroexpand
+           (y-symbol-expansion form))
           (if
-              (atom form)
-              form
+            (atom form)
+            form
             (let
-                ((x
-                  (y-macroexpand
-                   (y-get form 0))))
+              ((x
+                (y-macroexpand
+                 (y-get form 0))))
               (if
-                  (eq x 'quote)
-                  form
+                (eq x 'quote)
+                form
                 (if
-                    (eq x '\`)
-                    (y-quasiexpand
-                     (y-get form 1))
+                  (eq x '\`)
+                  (y-quasiexpand
+                   (y-get form 1))
                   (if
-                      (y-macro-p x)
-                      (y-macroexpand
-                       (apply
-                        (y-macro-function x)
-                        (cdr form)))
+                    (y-macro-p x)
+                    (y-macroexpand
+                     (apply
+                      (y-macro-function x)
+                      (cdr form)))
                     (mapcar 'y-macroexpand form)))))))))
   (defalias 'y-expand
     #'(lambda
@@ -402,43 +457,43 @@
     #'(lambda
         (x depth)
         (cond
-         ((= depth 0)
-          (y-macroexpand x))
-         ((and
-           (consp x)
-           (eq
-            (car x)
-            '\,))
-          (list '\,
-                (y-quasiexpand-1
-                 (cadr x)
-                 (- depth 1))))
-         ((and
-           (consp x)
-           (eq
-            (car x)
-            '\,@)
-           (= depth 1))
-          (list '\,@
-                (y-quasiexpand-1
-                 (cadr x)
-                 (- depth 1))))
-         ((and
-           (consp x)
-           (eq
-            (car x)
-            '\`))
-          (list '\`
-                (y-quasiexpand-1
-                 (cadr x)
-                 (+ depth 1))))
-         ((consp x)
-          (mapcar
-           #'(lambda
-               (form)
-               (y-quasiexpand-1 form depth))
-           x))
-         (t x))))
+          ((= depth 0)
+           (y-macroexpand x))
+          ((and
+            (consp x)
+            (eq
+             (car x)
+             '\,))
+           (list '\,
+                 (y-quasiexpand-1
+                  (cadr x)
+                  (- depth 1))))
+          ((and
+            (consp x)
+            (eq
+             (car x)
+             '\,@)
+            (= depth 1))
+           (list '\,@
+                 (y-quasiexpand-1
+                  (cadr x)
+                  (- depth 1))))
+          ((and
+            (consp x)
+            (eq
+             (car x)
+             '\`))
+           (list '\`
+                 (y-quasiexpand-1
+                  (cadr x)
+                  (+ depth 1))))
+          ((consp x)
+           (mapcar
+            #'(lambda
+                (form)
+                (y-quasiexpand-1 form depth))
+            x))
+          (t x))))
   (defalias 'y-do
     (cons 'macro
           #'(lambda
@@ -446,6 +501,15 @@
               (macroexpand-all
                (y-macroexpand
                 (cons 'progn body))))))
+  (defalias 'y-module-name
+    #'(lambda nil
+        (let
+          ((file
+            (or load-file-name
+                (buffer-file-name))))
+          (if file
+              (file-name-base file)
+              (buffer-name)))))
   (progn
     (y-setenv 'fn :macro
               #'(lambda
@@ -453,8 +517,8 @@
                   (progn
                     (list 'lambda
                           (if
-                              (atom args)
-                              (list '&rest args)
+                            (atom args)
+                            (list '&rest args)
                             args)
                           (cons 'y-do body)))))
     (y-setenv 'define-macro :macro
@@ -462,12 +526,46 @@
                   (name args &rest body)
                   (progn
                     (let
-                        ((form
-                          (list 'y-setenv
-                                (list 'quote name)
-                                ':macro
-                                (cons 'fn
-                                      (cons args body)))))
+                      ((form
+                         (list 'y-setenv
+                               (list 'quote name)
+                               ':macro
+                               (cons 'fn
+                                     (cons args body)))))
                       (y-eval form)
-                      form)))))
+                      form))))
+    (y-setenv 'define :macro
+              #'(lambda
+                  (name x &rest body)
+                  (progn
+                    (let
+                      ((var
+                        (y-id
+                         (concat
+                          (y-module-name)
+                          "--"
+                          (symbol-name name)))))
+                      (y-setenv name :symbol var)
+                      (y-setenv var :variable t)
+                      (list 'defalias
+                            (list 'quote var)
+                            (cons 'fn
+                                  (cons x body)))))))
+    (y-setenv 'define-global :macro
+              #'(lambda
+                  (name x &rest body)
+                  (progn
+                    (let
+                      ((var
+                        (y-id
+                         (concat
+                          (y-module-name)
+                          "-"
+                          (symbol-name name)))))
+                      (y-setenv name :symbol var)
+                      (y-setenv var :variable t :toplevel t)
+                      (list 'defalias
+                            (list 'quote var)
+                            (cons 'fn
+                                  (cons x body))))))))
   (provide 'y))
