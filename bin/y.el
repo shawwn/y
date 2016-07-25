@@ -536,7 +536,64 @@
       (progn
         (funcall 'eval
                  (y-expand form)
-                 t)))))
+                 t))))
+(y-setenv 'fn :macro
+          #'(lambda
+              (args &rest body)
+              (progn
+                (list 'lambda
+                      (if
+                        (atom args)
+                        (list '&rest args)
+                        args)
+                      (cons 'y-do body)))))
+(y-setenv 'define-macro :macro
+          #'(lambda
+              (name args &rest body)
+              (progn
+                (let
+                  ((form
+                     (list 'setenv
+                           (list 'quote name)
+                           ':macro
+                           (cons 'fn
+                                 (cons args body)))))
+                  (y-eval form)
+                  form))))
+(y-setenv 'define :macro
+          #'(lambda
+              (name x &rest body)
+              (progn
+                (let
+                  ((var
+                    (y--global-id
+                     (concat
+                      (y--module-name)
+                      "--")
+                     name)))
+                  (y-setenv name :symbol var)
+                  (y-setenv var :variable t)
+                  (list 'defalias
+                        (list 'quote var)
+                        (cons 'fn
+                              (cons x body)))))))
+(y-setenv 'define-global :macro
+          #'(lambda
+              (name x &rest body)
+              (progn
+                (let
+                  ((var
+                    (y--global-id
+                     (concat
+                      (y--module-name)
+                      "-")
+                     name)))
+                  (y-setenv name :symbol var)
+                  (y-setenv var :variable t :toplevel t)
+                  (list 'defalias
+                        (list 'quote var)
+                        (cons 'fn
+                              (cons x body))))))))
   (defalias 'y-do
     (cons 'macro
           #'(lambda
@@ -544,62 +601,4 @@
               (macroexpand-all
                (y-macroexpand
                 (cons 'progn body))))))
-  (progn
-    (y-setenv 'fn :macro
-              #'(lambda
-                  (args &rest body)
-                  (progn
-                    (list 'lambda
-                          (if
-                            (atom args)
-                            (list '&rest args)
-                            args)
-                          (cons 'y-do body)))))
-    (y-setenv 'define-macro :macro
-              #'(lambda
-                  (name args &rest body)
-                  (progn
-                    (let
-                      ((form
-                         (list 'setenv
-                               (list 'quote name)
-                               ':macro
-                               (cons 'fn
-                                     (cons args body)))))
-                      (y-eval form)
-                      form))))
-    (y-setenv 'define :macro
-              #'(lambda
-                  (name x &rest body)
-                  (progn
-                    (let
-                      ((var
-                        (y--global-id
-                         (concat
-                          (y--module-name)
-                          "--")
-                         name)))
-                      (y-setenv name :symbol var)
-                      (y-setenv var :variable t)
-                      (list 'defalias
-                            (list 'quote var)
-                            (cons 'fn
-                                  (cons x body)))))))
-    (y-setenv 'define-global :macro
-              #'(lambda
-                  (name x &rest body)
-                  (progn
-                    (let
-                      ((var
-                        (y--global-id
-                         (concat
-                          (y--module-name)
-                          "-")
-                         name)))
-                      (y-setenv name :symbol var)
-                      (y-setenv var :variable t :toplevel t)
-                      (list 'defalias
-                            (list 'quote var)
-                            (cons 'fn
-                                  (cons x body))))))))
   (provide 'y))

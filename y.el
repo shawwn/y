@@ -202,12 +202,7 @@
 
  (define-global eval (form)
    (funcall 'eval (expand form) t))
-)
 
-(defmacro y-do (&rest body)
-  (macroexpand-all (y-macroexpand `(progn ,@body))))
-
-(y-do
  (define-macro fn (args &rest body)
    `(lambda ,(if (atom args) `(&rest ,args) args)
       (y-do ,@body)))
@@ -229,6 +224,9 @@
      (setenv var :variable t :toplevel t)
      `(defalias ',var (fn ,x ,@body))))
 )
+
+(defmacro y-do (&rest body)
+  (macroexpand-all (y-macroexpand `(progn ,@body))))
 
 (provide 'y)
  
