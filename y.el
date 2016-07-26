@@ -321,7 +321,7 @@
       t))
 
   (define-global stash (args)
-    (let l ()
+    (let l () ;(cut args 0)
       (step x args
         (add l x))
       (when (keys? args)
@@ -334,9 +334,9 @@
       l))
 
   (define-global unstash (args)
-    (if (none? args) ()
+    (if (none? args) (obj)
       (let l (last args)
-        (if (get l :_stash)
+        (if (and (or (listp l) (obj? l)) (get l :_stash))
             (with args1 (almost args)
               (each (k v) l
                 (unless (= k :_stash)
@@ -410,55 +410,32 @@
         (intern (clip (symbol-name k) 1))
       k))
 
-
-  (define flag? (x)
-    (and (keywordp x)
-         (let s (symbol-name x)
-           (= ?: (at s (edge s))))))
-
-  (define key? (x)
-    (and (not (keywordp x))
-         (symbolp x)
-         (let s (symbol-name x)
-           (= ?: (at s (edge s))))))
-
-  (define key (x)
-    (if (flag? x)
-        (intern (let s (symbol-name x)
-                  (clip s 0 (edge s))))
-      (if (key? x)
-          (intern (let s (symbol-name x)
-                    (concat ":" (clip s 0 (edge s)))))
-        x)))
-
-  (define %list (args)
-    (with l ()
-      (while args
-        (let (k (car args)
-              v (cadr args))
-          (when (or (= k '&rest) (= k :rest))
-            (set k 'rest:))
-          (unless (= k '&optional)
-            (if (key? k)
-                (progn (join! l (list (key k) v))
-                       (setq args (cdr args)))
-              (if (or (flag? k) (keywordp k))
-                (join! l (list (key k) t))
-                (add l (car args)))))
-          (set args (cdr args))))))
-
   (define bind (lh rh)
     (if (atom? lh) `(,lh ,rh)
       (let-unique (var)
         (with bs (list var rh)
-          (let l (%list lh)
-            (each (k v) l
-              (let x (if (= k :rest)
-                         `(cut ,var ,(\# l))
-                       `(get ,var ',k))
-                (when (is? k)
-                  (let k (if (= v t) (unkeywordify k) v)
-                    (join! bs (bind k x)))))))))))
+          (each (k v) lh
+            (let x (if (= k :rest)
+                       `(cut ,var ,(\# lh))
+                     `(get ,var ',k))
+              (when (is? k)
+                (let k (if (= v t) (unkeywordify k) v)
+                  (join! bs (bind k x))))))))))
+
+  (define bind* (args body)
+    (if (and args (atom? args))
+        (bind* `(&rest ,args) body)
+      (let (args1 () bs ())
+        (mapc (fn (x)
+                (if (= x '&rest) (setq args1 (nconc args1 (list '&rest)))
+                  (if (= x '&optional) (setq args1 (nconc args1 (list '&optional)))
+                    (if (not (atom x))
+                        (let-unique (id1)
+                          (setq args1 (nconc args1 (list id1)))
+                          (join! bs (list x id1)))
+                      (setq args1 (nconc args1 (list x)))))))
+              args)
+        (list args1 (if (null bs) `(progn ,@body) `(let ,bs ,@body))))))
 
   (define-global macroexpand (form)
     (let s (symbol-expansion form)
@@ -483,11 +460,10 @@
     `(let (,x ,v) ,@body ,x))
 
   (define-macro fn (args &rest body)
-    `(lambda ,(if (not (listp args)) `(&rest ,args) args)
-       ,@body))
+    `(lambda ,@(bind* args body)))
 
   (define-macro define-macro (name args &rest body)
-    (let form `(setenv ',name :macro (fn ,args ,@body))
+    (let* ((form `(setenv ',name :macro (fn ,args ,@body))))
       (eval form)
       form))
 
@@ -526,7 +502,7 @@
     (if (none? expansions)
         `(progn ,@(macroexpand body))
       (with-frame
-        (mapc (lambda (x) (macroexpand `(define-symbol ,@x)))
+        (mapc (fn (x) (macroexpand `(define-symbol ,@x)))
               (pair expansions))
         `(progn ,@(macroexpand body)))))
 
@@ -536,8 +512,8 @@
   (define-macro let (bs &rest body)
     (if (and bs (atom bs)) `(let (,bs ,(hd body)) ,@(tl body))
       (if (none? bs) `(progn ,@body)
-        (let ((lh rh rest: bs2) bs
-              (var val rest: bs1) (bind lh rh))
+        (let ((lh rh :rest bs2) bs
+              (var val :rest bs1) (bind lh rh))
           (let renames ()
             (if (or (bound? var) (toplevel?))
                 (let var1 (unique var)
@@ -577,7 +553,7 @@
       (let ((k v) (if (atom? x) (list (unique 'i) x)
                     (if (> (\# x) 1) x
                       (list (unique 'i) (hd x)))))
-        `(let (,o ,l ,f (lambda (,k ,a) (let (,v ,a) ,@body)))
+        `(let (,o ,l ,f (fn (,k ,v) ,@body))
            (if (hash-table-p ,o)
                (maphash ,f ,o)
              (if (listp ,o)
@@ -585,7 +561,7 @@
                    (funcall ,f ,k ,a))
                (let ,n (\# ,o)
                  (for ,k ,n
-                   (let (,a (at ,o ,k))
+                   (let ,a (at ,o ,k)
                      (funcall ,f ,k ,a))))))))))
 )
 
