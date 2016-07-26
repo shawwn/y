@@ -19,7 +19,7 @@
           (insert ";;; -*- lexical-binding: t -*-\n")
           (insert (with-output-to-string
                     ;; (message "expanding...")
-                    (let ((form (funcall 'y-expand `(progn ,@(cdr forms)))))
+                    (let* ((form (funcall 'y-expand `(progn ,@(cdr forms)))))
                       ;; (message "pretty-printing...")
                       (pp form))))
           (untabify (point-min) (point-max))
@@ -29,10 +29,11 @@
 
 (setq-local lexical-binding t)
 
-(require 'cl)
+(eval-when-compile
+  (require 'cl))
 
 (cl-assert lexical-binding)
-(let ((h (make-hash-table :test 'eq)))
+(let* ((h (make-hash-table :test 'eq)))
   (defun y-unique (&optional x)
     (let* ((s (or x 'gs))
            (n (gethash s h 0))
@@ -41,22 +42,22 @@
       s1)))
 
 (defmacro y-let-unique (vars &rest body)
-  `(let (,@(mapcar (lambda (x)
+  `(let* (,@(mapcar (lambda (x)
                      (list x `(y-unique ',x)))
                    vars))
      ,@body))
 
-(defun y-next (h)
+(defsubst y-next (h)
   (if (keywordp (car h))
       (cddr h)
     (cdr h)))
 
 (defmacro y-%for (h k v &rest body)
   (y-let-unique (i)
-    `(let ((,i -1))
+    `(let* ((,i -1))
        (while ,h
-         (let ((,k (if (keywordp (car ,h)) (car ,h) (incf ,i)))
-               (,v (if (keywordp (car ,h)) (cadr ,h) (car ,h))))
+         (let* ((,k (if (keywordp (car ,h)) (car ,h) (incf ,i)))
+                (,v (if (keywordp (car ,h)) (cadr ,h) (car ,h))))
            ,@body)
          (setq ,h (if (keywordp (car ,h)) (cddr ,h) (cdr ,h))))
        nil)))
@@ -64,17 +65,7 @@
 (defmacro y-set (a &optional b)
   `(setf ,a ,b))
 
-(defun y-get (h k)
-  (declare (gv-expander
-            (lambda (f)
-              (gv-letplace (getter setter) h
-                (macroexp-let2 nil i k
-                  (funcall f `(y-get ,getter ,i)
-                           (lambda (val)
-                             (macroexp-let2 nil v val
-                               `(progn ,(funcall setter
-                                                 `(y-put ,getter ,i ,v))
-                                       ,v)))))))))
+(defsubst y-get (h k)
   (if (hash-table-p h)
       (gethash k h)
     (if (listp h)
@@ -84,17 +75,28 @@
               (throw 'y-break val))))
       (elt h k))))
 
-(defun y-put (h k &optional v)
+(put 'y-get 'gv-expander
+     #'(lambda (f place idx)
+         (gv-letplace (getter setter) place
+           (funcall f `(y-get ,getter ,idx)
+                    #'(lambda (val)
+                        (y-let-unique (k v)
+                          `(let* ((,k ,idx)
+                                  (,v ,val))
+                             (y-set ,getter (y-put ,getter ,k ,v))
+                             ,v)))))))
+
+(defsubst y-put (h k &optional v)
   (if (hash-table-p h)
       (progn (puthash k v h) h)
-    (let ((l h))
+    (let* ((l h))
       (if (listp h)
           (catch 'y-break
             (when (or (keywordp k) (>= k 0))
               (when (null l)
                 (setq l (if (keywordp k) (list k nil) (list nil)))
                 (setq h l))
-              (y-%for h var val
+              (y-%for h var _val
                 (when (eq var k)
                   (if (keywordp k)
                       (setcar (cdr h) v)
@@ -107,47 +109,56 @@
         (aset h k v))
       l)))
 
-(defun y-length (h)
-  (if (listp h)
-      (let ((n -1))
-        (y-%for h k v
-          (when (integerp k)
-            (setq n (max n k))))
-        (+ n 1))
-    (if (hash-table-p h)
-        (let ((n -1))
-          (maphash (lambda (k v)
-                     (if (integerp k)
-                         (setq n (max n k))))
-                   h)
+(defsubst y-length (h &optional upto)
+  (catch 'y-break
+    (if (listp h)
+        (let* ((n -1))
+          (y-%for h k _v
+            (when (integerp k)
+              (setq n (max n k))
+              (when (and upto (>= n upto))
+                (throw 'y-break (+ n 1)))))
           (+ n 1))
-      (length h))))
+      (if (hash-table-p h)
+          (let* ((n -1))
+            (maphash (lambda (k _v)
+                       (when (integerp k)
+                         (setq n (max n k))
+                         (when (and upto (>= n upto))
+                           (throw 'y-break (+ n 1)))))
+                     h)
+            (+ n 1))
+        (length h)))))
+
+(defmacro y-do (&rest body)
+  (let* ((y-environment (apply 'vector (append y-environment nil))))
+    `(progn ,@(mapcar 'y-macroexpand body))))
 
 (y-do
  (defvar y-environment (list (obj)))
 
  (define-global setenv (k &rest ks)
-   (let* ((i (if (get ks :toplevel) 0 (- (\# environment) 1)))
-          (frame (get environment i))
-          (entry (get frame k)))
+   (let* ((i (if (memq :toplevel ks) 0 (- (\# environment) 1)))
+          (frame (at environment i))
+          (entry (or (get frame k) (obj))))
      (each (k v) ks
        (set (get entry k) v))
      (set (get frame k) entry)))
 
  (define-global getenv (k &optional p)
-   (let ((i (- (\# environment) 1)))
+   (let* ((i (- (\# environment) 1)))
      (catch 'y-break
        (while (>= i 0)
-         (let ((b (get (at environment 0) k)))
+         (let* ((b (get (at environment i) k)))
            (if b
-	       (throw 'y-break (if p (get b p) b))
-	      (decf i)))))))
+               (throw 'y-break (if p (get b p) b))
+             (dec i)))))))
 
  (define-symbol unique y-unique)
  (define-symbol let-unique y-let-unique)
  (define-symbol at get)
+ (define-macro set args `(y-set ,@args))
  (define-symbol get y-get)
- (define-symbol set y-set)
  (define-symbol \# y-length)
  (define-symbol = eql)
  (define-symbol environment y-environment)
@@ -158,52 +169,51 @@
  (define-global is? (x)
    (not (nil? x)))
 
- (define-global none? (x) (= (\# x) 0))
- (define-global some? (x) (> (\# x) 0))
- (define-global one? (x) (= (\# x) 1))
- (define-global two? (x) (= (\# x) 2))
+ (define-global none? (x) (= (\# x 0) 0))
+ (define-global some? (x) (> (\# x 0) 0))
+ (define-global one? (x) (= (\# x 1) 1))
+ (define-global two? (x) (= (\# x 2) 2))
 
  (define-global hd (l) (at l 0))
 
  (define-global type (x) (type-of x))
 
  (define-global string? (x) (stringp x))
- (define-global symbol? (x) (symbolp x))
  (define-global number? (x) (or (integerp x) (numberp x)))
- (define-global function? (x) (and (not (symbol? x)) (functionp x)))
+ (define-global function? (x) (and (not (symbolp x)) (functionp x)))
 
  (define-global obj? (x) (hash-table-p x))
 
  (define-macro obj ()
-   `(make-hash-table :test 'equal))
+   `(make-hash-table :test 'eq))
 
  (define-global atom? (x)
-   (or (nil? x) (symbol? x) (string? x) (number? x)))
-
- (define-global clamp (n a b)
-   (if (< n a) a
-     (if (> n b) b
-       n)))
+   (or (nil? x) (symbolp x) (string? x) (number? x)))
 
  (define-global clip (s from &optional upto)
    (let* ((n (length s))
-          (i (clamp from 0 n))
-          (j (if upto (clamp upto i n))))
+          (i (if (or (nil? from) (< from 0)) 0 from))
+          (j (if (or (nil? upto) (> upto n)) n (max upto i))))
      (substring s i j)))
 
+ (define chop? (x from upto)
+   (and (consp x) (= from 1) (null upto) (not (keywordp (car x)))))
+
  (define-global cut (x &optional from upto)
-   (with l (if (obj? x) (obj) ())
-     (let* ((j 0)
-            (i (if (or (nil? from) (< from 0)) 0 from))
-            (n (\# x))
-            (upto (if (or (nil? upto) (> upto n)) n upto)))
-       (while (< i upto)
-         (set (at l j) (at x i))
-         (inc i)
-         (inc j))
-       (each (k v) x
-         (unless (number? k)
-           (set (get l k) v))))))
+   (if (chop? x from upto)
+       (cdr x)
+     (with l (if (obj? x) (obj) ())
+       (let* ((j 0)
+              (i (if (or (nil? from) (< from 0)) 0 from))
+              (n (\# x))
+              (upto (if (or (nil? upto) (> upto n)) n upto)))
+         (while (< i upto)
+           (set (at l j) (at x i))
+           (inc i)
+           (inc j))
+         (each (k v) x
+           (unless (number? k)
+             (set (get l k) v)))))))
 
  (define-global keys (x)
    (with l (if (obj? x) (obj) ())
@@ -233,7 +243,7 @@
 
  (define-global reverse (l)
    (with l1 (keys l)
-     (let ((i (edge l)))
+     (let* ((i (edge l)))
        (while (>= i 0)
          (add l1 (at l i))
          (dec i)))))
@@ -245,11 +255,11 @@
 
  (define-global join ls
    (if (two? ls)
-       (let ((a (at ls 0))
-             (b (at ls 1)))
+       (let* ((a (at ls 0))
+              (b (at ls 1)))
          (if (and a b)
-             (let ((c (if (obj? a) (obj) ()))
-                   (o (\# a)))
+             (let* ((c (if (obj? a) (obj) ()))
+                    (o (\# a)))
                (each (k v) a
                  (set (get c k) v))
                (each (k v) b
@@ -263,13 +273,13 @@
  (define-global find (f l)
    (catch 'y-break
      (each x l
-       (let ((y (funcall f x)))
+       (let* ((y (funcall f x)))
          (if y (throw 'y-break y))))))
 
  (define-global first (f l)
    (catch 'y-break
      (step x l
-       (let ((y (funcall f x)))
+       (let* ((y (funcall f x)))
          (if y (throw 'y-break y))))))
 
  (define-global in? (x l)
@@ -277,7 +287,7 @@
 
  (define-global pair (l)
    (with l1 (if (obj? l) (obj) ())
-     (let ((n (\# l)))
+     (let* ((n (\# l)))
        (for i n
          (add l1 (list (at l i) (at l (+ i 1))))
          (inc i)))))
@@ -285,12 +295,12 @@
  (define-global map (f x)
    (with l (if (obj? x) (obj) ())
      (step v x
-       (let ((y (funcall f v)))
+       (let* ((y (funcall f v)))
          (if (is? y)
            (add l y))))
      (each (k v) x
        (unless (number? k)
-         (let ((y (funcall f v)))
+         (let* ((y (funcall f v)))
            (when (is? y)
              (set (get l k) y)))))))
 
@@ -300,6 +310,7 @@
  (define-global keys? (l)
    (catch 'y-break
      (each (k v) l
+       (setq v v)
        (unless (number? k)
          (throw 'y-break t)))
      nil))
@@ -307,16 +318,17 @@
  (define-global empty? (l)
    (catch 'y-break
      (each x l
+       (setq x x)
        (throw 'y-break nil))
      t))
 
  (define-global stash (args)
-   (let ((l ()))
+   (let* ((l ()))
      (each (k v) args
        (when (number? k)
          (add l v)))
      (when (keys? args)
-       (let ((p (if (obj? args) (obj) ())))
+       (let* ((p (if (obj? args) (obj) ())))
          (each (k v) args
            (unless (number? k)
              (set (get p k) v)))
@@ -326,7 +338,7 @@
 
  (define-global unstash (args)
    (if (none? args) ()
-     (let ((l (last args)))
+     (let* ((l (last args)))
        (if (get l :_stash)
            (with args1 (almost args)
              (each (k v) l
@@ -342,11 +354,14 @@
      l))
 
  (define-global apply (f args)
-   (let ((args1 (stash args)))
+   (let* ((args1 (stash args)))
      (funcall 'apply f args1)))
 
+ (define-global toplevel? ()
+   (one? environment))
+
  (define id (x)
-   (let ((s (append (if (symbolp x) (symbol-name x) x) nil)))
+   (let* ((s (append (if (symbolp x) (symbol-name x) x) nil)))
      (when (eq ?? (get s (edge s)))
        (if (memq ?- s)
             (progn (set (get s (edge s)) ?-)
@@ -358,21 +373,14 @@
 
  (define module-name ()
    (or y-module
-       (let ((file (or load-file-name (buffer-file-name))))
+       (let* ((file (or load-file-name (buffer-file-name))))
          (if file (file-name-base file) (buffer-name)))))
 
  (define global-id (prefix name)
-   (let ((s (if (stringp name) name (symbol-name name))))
+   (let* ((s (if (stringp name) name (symbol-name name))))
      (if (eq 0 (string-match (regexp-quote prefix) s))
           name
         (id (concat prefix s)))))
-
- (define symbol-expansion (k)
-   (getenv k :symbol))
-
- (define symbol? (k)
-   (let ((v (symbol-expansion k)))
-     (and v (not (eq v k)))))
 
  (define macro-function (k)
    (getenv k :macro))
@@ -380,50 +388,71 @@
  (define macro? (k)
    (macro-function k))
 
- (define quasiexpand-1 (x depth)
-   (cond ((= depth 0)
-          (macroexpand x))
-         ((and (consp x) (eq (car x) '\,))
-          (list '\, (quasiexpand-1 (cadr x) (- depth 1))))
-         ((and (consp x) (eq (car x) '\,@) (= depth 1))
-          (list '\,@ (quasiexpand-1 (cadr x) (- depth 1))))
-         ((and (consp x) (eq (car x) '\`))
-          (list '\` (quasiexpand-1 (cadr x) (+ depth 1))))
-         ((consp x)
-          (mapcar (lambda (form) (quasiexpand-1 form depth)) x))
-         (t x)))
+ (define symbol-expansion (k)
+   (getenv k :symbol))
 
- (define quasiexpand (form)
-   (list '\` (quasiexpand-1 form 1)))
+ (define symbol? (k)
+   (let* ((v (symbol-expansion k)))
+     (and v (not (eq v k)))))
+
+ (define variable? (k)
+   (let* ((i (- (\# environment) 1)))
+     (catch 'y-break
+       (while (>= i 0)
+         (let* ((b (get (at environment i) k)))
+           (if b (throw 'y-break (and b (get b :variable)))
+             (decf i)))))))
+
+ (define bound? (x)
+   (or (macro? x)
+       (symbol? x)
+       (variable? x)))
+
+ (define unkeywordify (k)
+   (if (keywordp k)
+       (intern (clip (symbol-name k) 1))
+     k))
+
+ (define bind (lh rh)
+   (if (atom? lh) `(,lh ,rh)
+     (let-unique (var)
+       (with bs (list var rh)
+         (each (k v) lh
+           (let* ((x (if (= k :rest)
+                        `(cut ,var ,(\# lh))
+                      `(get ,var ',k))))
+             (when (is? k)
+               (let* ((k (if (= v t) (unkeywordify k) v)))
+                 (join! bs (bind k x))))))))))
 
  (define-global macroexpand (form)
-   (if (symbol? form)
-        (macroexpand (symbol-expansion form))
-      (if (atom form) form
-        (let ((x (macroexpand (get form 0))))
-          (if (eq x 'quote)
-              form
-            (if (eq x '\`)
-                (quasiexpand (get form 1))
-              (if (macro? x)
-                  (macroexpand (apply (macro-function x) (cdr form)))
-                (mapcar 'y-macroexpand form))))))))
+   (let* ((s (symbol-expansion form)))
+      (if s (macroexpand s)
+        (if (atom form) form
+          (let* ((x (macroexpand (hd form))))
+            (if (eq x 'quote)
+                form
+              (if (eq x '\`)
+                  (macroexpand (funcall 'macroexpand form))
+                (if (macro? x)
+                    (macroexpand (funcall 'apply (macro-function x) (tl form)))
+                  (cons x (mapcar 'y-macroexpand (tl form)))))))))))
 
  (define-global expand (form)
-   (macroexpand-all (macroexpand form)))
+   (macroexpand-all (y-macroexpand form)))
 
  (define-global eval (form)
-   (funcall 'eval (expand form) t))
+   (funcall 'eval (macroexpand form) t))
 
  (define-macro with (x v &rest body)
-   `(let ((,x ,v)) ,@body ,x))
+   `(let* ((,x ,v)) ,@body ,x))
 
  (define-macro fn (args &rest body)
    `(lambda ,(if (not (listp args)) `(&rest ,args) args)
-      (y-do ,@body)))
+      ,@body))
 
  (define-macro define-macro (name args &rest body)
-   (let ((form `(setenv ',name :macro (fn ,args ,@body))))
+   (let* ((form `(setenv ',name :macro (fn ,args ,@body))))
      (eval form)
      form))
 
@@ -432,17 +461,62 @@
    `(setenv ',name :symbol ',expansion))
 
  (define-macro define (name x &rest body)
-   (let ((var (global-id (concat (module-name) "--") name)))
+   (let* ((var (global-id (concat (module-name) "--") name)))
      (setenv name :symbol var)
      (setenv var :variable t)
-     `(defalias ',var (fn ,x ,@body))))
+     `(progn (defalias ',var (fn ,x ,@body))
+             (setenv ',name :symbol ',var))))
 
  (define-macro define-global (name x &rest body)
-   (let ((var (global-id (concat (module-name) "-") name)))
+   (let* ((var (global-id (concat (module-name) "-") name)))
      (setenv name :symbol var)
      (setenv var :variable t :toplevel t)
      `(progn (defalias ',var (fn ,x ,@body))
              (setenv ',name :symbol ',var))))
+
+ (define-macro with-frame body
+   (let-unique (x)
+     `(progn (set environment (apply 'vector (append environment (list (obj)))))
+             (with ,x (progn ,@body)
+               (set environment (apply 'vector (almost environment)))))))
+
+ (define-macro let-macro (definitions &rest body)
+   (with-frame
+     (map (fn (m)
+            (macroexpand `(define-macro ,@m)))
+          definitions)
+     `(progn ,@(macroexpand body))))
+
+ (define-macro let-symbol (expansions &rest body)
+   (if (none? expansions)
+       `(progn ,@(macroexpand body))
+     (with-frame
+       (mapc (lambda (x) (macroexpand `(define-symbol ,@x)))
+             (pair expansions))
+       `(progn ,@(macroexpand body)))))
+
+ (define-macro when-compiling (&rest body)
+   (eval `(progn ,@body)))
+
+ (define-macro let (bs &rest body)
+   (if (and bs (atom bs)) `(let (,bs ,(hd body)) ,@(tl body))
+     (if (none? bs) `(progn ,@body)
+       (let ((lh rh :rest bs2) bs
+             (var val :rest bs1) (bind lh rh))
+         (let renames ()
+           (if (or (bound? var) (toplevel?))
+                 (let var1 (unique var)
+                   (set renames (list var var1))
+                   (set var var1))
+               (setenv var :variable t))
+           (let form `(let ,(join bs1 bs2) ,@body)
+             (unless (none? renames)
+               (set form `(let-symbol ,renames ,form)))
+             `(let* ((,var ,val))
+                ,(macroexpand form))))))))
+
+ (define-macro join! (a &rest bs)
+   `(set ,a (join ,a ,@bs)))
 
  (define-macro inc (n &optional by)
    `(set ,n (+ ,n ,(or by 1))))
@@ -451,7 +525,7 @@
    `(set ,n (- ,n ,(or by 1))))
 
  (define-macro for (i to &rest body)
-   `(let ((,i 0))
+   `(let* ((,i 0))
       (while (< ,i ,to)
         ,@body
         (inc ,i))))
@@ -460,29 +534,26 @@
    (let-unique (x n i)
      `(let* ((,x ,l) (,n (\# ,x)))
         (for ,i ,n
-          (let ((,v (at ,x ,i)))
+          (let* ((,v (at ,x ,i)))
             ,@body)))))
 
  (define-macro each (x l &rest body)
-   (let-unique (o n i f)
-     (cl-destructuring-bind (k v) (if (atom? x) (list i x)
+   (let-unique (o n f)
+     (cl-destructuring-bind (k v) (if (atom? x) (list (unique 'i) x)
                                     (if (> (\# x) 1) x
-                                      (list i (hd x))))
-       `(let ((,o ,l)
-              (,f (lambda (,k ,v) ,@body)))
+                                      (list (unique 'i) (hd x))))
+       `(let* ((,o ,l)
+               (,f (lambda (,k ,v) ,@body)))
           (if (hash-table-p ,o)
               (maphash ,f ,o)
             (if (listp ,o)
                 (y-%for ,o ,k ,v
                   (funcall ,f ,k ,v))
-              (let ((,n (\# ,o)))
+              (let* ((,n (\# ,o)))
                 (for ,k ,n
-                  (let ((,v (at ,o ,k)))
+                  (let* ((,v (at ,o ,k)))
                     (funcall ,f ,k ,v))))))))))
 )
-
-(defmacro y-do (&rest body)
-  (macroexpand-all (y-macroexpand `(progn ,@body))))
 
 (provide 'y)
  
