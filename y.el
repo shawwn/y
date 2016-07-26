@@ -410,17 +410,55 @@
         (intern (clip (symbol-name k) 1))
       k))
 
+
+  (define flag? (x)
+    (and (keywordp x)
+         (let s (symbol-name x)
+           (= ?: (at s (edge s))))))
+
+  (define key? (x)
+    (and (not (keywordp x))
+         (symbolp x)
+         (let s (symbol-name x)
+           (= ?: (at s (edge s))))))
+
+  (define key (x)
+    (if (flag? x)
+        (intern (let s (symbol-name x)
+                  (clip s 0 (edge s))))
+      (if (key? x)
+          (intern (let s (symbol-name x)
+                    (concat ":" (clip s 0 (edge s)))))
+        x)))
+
+  (define %list (args)
+    (with l ()
+      (while args
+        (let (k (car args)
+              v (cadr args))
+          (when (or (= k '&rest) (= k :rest))
+            (set k 'rest:))
+          (unless (= k '&optional)
+            (if (key? k)
+                (progn (join! l (list (key k) v))
+                       (setq args (cdr args)))
+              (if (or (flag? k) (keywordp k))
+                (join! l (list (key k) t))
+                (add l (car args)))))
+          (set args (cdr args))))))
+
   (define bind (lh rh)
     (if (atom? lh) `(,lh ,rh)
       (let-unique (var)
         (with bs (list var rh)
-          (each (k v) lh
-            (let x (if (= k :rest)
-                       `(cut ,var ,(\# lh))
-                     `(get ,var ',k))
-              (when (is? k)
-                (let k (if (= v t) (unkeywordify k) v)
-                  (join! bs (bind k x))))))))))
+          (let l (%list lh)
+            (each (k v) l
+              (let x (if (= k :rest)
+                         `(cut ,var ,(\# l))
+                       `(get ,var ',k))
+                (when (is? k)
+                  (let k (if (= v t) (unkeywordify k) v)
+                    (join! bs (bind k x)))))))))))
 
   (define-global macroexpand (form)
     (let s (symbol-expansion form)
@@ -498,8 +536,8 @@
   (define-macro let (bs &rest body)
     (if (and bs (atom bs)) `(let (,bs ,(hd body)) ,@(tl body))
       (if (none? bs) `(progn ,@body)
-        (let ((lh rh :rest bs2) bs
-              (var val :rest bs1) (bind lh rh))
+        (let ((lh rh rest: bs2) bs
+              (var val rest: bs1) (bind lh rh))
           (let renames ()
             (if (or (bound? var) (toplevel?))
                 (let var1 (unique var)
