@@ -248,9 +248,9 @@
           (dec i)))))
 
   (define-global reduce (f x)
-    (if (none? x) nil
-      (one? x) (hd x)
-      (funcall f (hd x) (reduce f (tl x)))))
+    (if? (none? x) nil
+         (one? x) (hd x)
+       (funcall f (hd x) (reduce f (tl x)))))
 
   (define-global join ls
     (if (two? ls)
@@ -427,34 +427,41 @@
         (bind* `(&rest ,args) body)
       (let (args1 () bs ())
         (mapc (fn (x)
-                (if (= x '&rest) (setq args1 (nconc args1 (list '&rest)))
-                  (if (= x '&optional) (setq args1 (nconc args1 (list '&optional)))
-                    (if (not (atom x))
-                        (let-unique (id1)
-                          (setq args1 (nconc args1 (list id1)))
-                          (join! bs (list x id1)))
-                      (setq args1 (nconc args1 (list x)))))))
+                (if (atom x)
+                    (setq args1 (nconc args1 (list x)))
+                  (let-unique (id1)
+                    (setq args1 (nconc args1 (list id1)))
+                    (join! bs (list x id1)))))
               args)
-        (list args1 (if (null bs) `(progn ,@body) `(let ,bs ,@body))))))
+        (list args1 (if (null bs)
+                        `(progn ,@body)
+                      `(let ,bs ,@body))))))
 
   (define-global macroexpand (form)
     (let s (symbol-expansion form)
-      (if s (macroexpand s)
-        (if (atom form) form
-          (let x (macroexpand (hd form))
-            (if (eq x 'quote)
-                form
-              (if (eq x '\`)
-                  (macroexpand (funcall 'macroexpand form))
-                (if (macro? x)
-                    (macroexpand (funcall 'apply (macro-function x) (tl form)))
-                  (cons x (mapcar 'y-macroexpand (tl form)))))))))))
+      (if? s (macroexpand s)
+           (atom form) form
+         (let x (macroexpand (hd form))
+           (if? (eq x 'quote) form
+                (eq x '\`)
+                (macroexpand (funcall 'macroexpand form))
+                (macro? x)
+                (macroexpand (funcall 'apply (macro-function x) (tl form)))
+              (cons x (mapcar 'y-macroexpand (tl form))))))))
 
   (define-global expand (form)
     (macroexpand-all (y-macroexpand form)))
 
   (define-global eval (form)
     (funcall 'eval (macroexpand form) t))
+
+  (define expand-if ((a b :rest c))
+    (if? (some? c) `((if ,a ,b ,@(expand-if c)))
+         (is? b) `((if ,a ,b))
+         (is? a) (list a)))
+
+  (define-macro if? branches
+    (hd (expand-if branches)))
 
   (define-macro with (x v &rest body)
     `(let (,x ,v) ,@body ,x))
@@ -510,21 +517,21 @@
     (eval `(progn ,@body)))
 
   (define-macro let (bs &rest body)
-    (if (and bs (atom bs)) `(let (,bs ,(hd body)) ,@(tl body))
-      (if (none? bs) `(progn ,@body)
-        (let ((lh rh :rest bs2) bs
-              (var val :rest bs1) (bind lh rh))
-          (let renames ()
-            (if (or (bound? var) (toplevel?))
-                (let var1 (unique var)
-                  (set renames (list var var1))
-                  (set var var1))
-              (setenv var :variable t))
-            (let form `(let ,(join bs1 bs2) ,@body)
-              (unless (none? renames)
-                (set form `(let-symbol ,renames ,form)))
-              `(let* ((,var ,val))
-                 ,(macroexpand form))))))))
+    (if? (and bs (atom bs)) `(let (,bs ,(hd body)) ,@(tl body))
+         (none? bs) `(progn ,@body)
+       (let ((lh rh :rest bs2) bs
+             (var val :rest bs1) (bind lh rh))
+         (let renames ()
+           (if (or (bound? var) (toplevel?))
+               (let var1 (unique var)
+                 (set renames (list var var1))
+                 (set var var1))
+             (setenv var :variable t))
+           (let form `(let ,(join bs1 bs2) ,@body)
+             (unless (none? renames)
+               (set form `(let-symbol ,renames ,form)))
+             `(let* ((,var ,val))
+                ,(macroexpand form)))))))
 
   (define-macro join! (a &rest bs)
     `(set ,a (join ,a ,@bs)))
@@ -554,15 +561,15 @@
                     (if (> (\# x) 1) x
                       (list (unique 'i) (hd x)))))
         `(let (,o ,l ,f (fn (,k ,v) ,@body))
-           (if (hash-table-p ,o)
-               (maphash ,f ,o)
-             (if (listp ,o)
-                 (y-%for ,o ,k ,a
-                   (funcall ,f ,k ,a))
+           (if? (hash-table-p ,o)
+                (maphash ,f ,o)
+                (listp ,o)
+                (y-%for ,o ,k ,a
+                  (funcall ,f ,k ,a))
                (let ,n (\# ,o)
                  (for ,k ,n
                    (let ,a (at ,o ,k)
-                     (funcall ,f ,k ,a))))))))))
+                     (funcall ,f ,k ,a)))))))))
 )
 
 (provide 'y)
