@@ -393,11 +393,11 @@
       (and v (not (eq v k)))))
 
   (define variable? (k)
-    (let i (- (\# environment) 1)
+    (let i (edge environment)
       (catch 'y-break
         (while (>= i 0)
           (let b (get (at environment i) k)
-            (if b (throw 'y-break (and b (get b :variable)))
+            (if b (throw 'y-break (get b :variable))
               (decf i)))))))
 
   (define bound? (x)
