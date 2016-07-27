@@ -462,7 +462,7 @@
                           (if
                               (listp o0)
                               (let*
-                                ((i12 -1))
+                                ((i16 -1))
                                 (while o0
                                   (let*
                                     ((k
@@ -470,8 +470,8 @@
                                           (keywordp
                                            (car o0))
                                           (car o0)
-                                        (setq i12
-                                              (1+ i12))))
+                                        (setq i16
+                                              (1+ i16))))
                                      (a0
                                       (if
                                           (keywordp
@@ -763,7 +763,7 @@
                                   (if
                                       (listp o1)
                                       (let*
-                                        ((i13 -1))
+                                        ((i17 -1))
                                         (while o1
                                           (let*
                                             ((k
@@ -771,8 +771,8 @@
                                                   (keywordp
                                                    (car o1))
                                                   (car o1)
-                                                (setq i13
-                                                      (1+ i13))))
+                                                (setq i17
+                                                      (1+ i17))))
                                              (a1
                                               (if
                                                   (keywordp
@@ -841,7 +841,7 @@
                       (if
                           (listp o2)
                           (let*
-                            ((i14 -1))
+                            ((i18 -1))
                             (while o2
                               (let*
                                 ((k
@@ -849,8 +849,8 @@
                                       (keywordp
                                        (car o2))
                                       (car o2)
-                                    (setq i14
-                                          (1+ i14))))
+                                    (setq i18
+                                          (1+ i18))))
                                  (a2
                                   (if
                                       (keywordp
@@ -1044,7 +1044,7 @@
                                         (if
                                             (listp o3)
                                             (let*
-                                              ((i15 -1))
+                                              ((i19 -1))
                                               (while o3
                                                 (let*
                                                   ((k
@@ -1052,8 +1052,8 @@
                                                         (keywordp
                                                          (car o3))
                                                         (car o3)
-                                                      (setq i15
-                                                            (1+ i15))))
+                                                      (setq i19
+                                                            (1+ i19))))
                                                    (a3
                                                     (if
                                                         (keywordp
@@ -1109,7 +1109,7 @@
                                         (if
                                             (listp o4)
                                             (let*
-                                              ((i16 -1))
+                                              ((i20 -1))
                                               (while o4
                                                 (let*
                                                   ((k
@@ -1117,8 +1117,8 @@
                                                         (keywordp
                                                          (car o4))
                                                         (car o4)
-                                                      (setq i16
-                                                            (1+ i16))))
+                                                      (setq i20
+                                                            (1+ i20))))
                                                    (a4
                                                     (if
                                                         (keywordp
@@ -1183,7 +1183,7 @@
                     (if
                         (listp o50)
                         (let*
-                          ((i17 -1))
+                          ((i21 -1))
                           (while o50
                             (let*
                               ((i6
@@ -1191,8 +1191,8 @@
                                     (keywordp
                                      (car o50))
                                     (car o50)
-                                  (setq i17
-                                        (1+ i17))))
+                                  (setq i21
+                                        (1+ i21))))
                                (a5
                                 (if
                                     (keywordp
@@ -1384,7 +1384,7 @@
                       (if
                           (listp o6)
                           (let*
-                            ((i18 -1))
+                            ((i22 -1))
                             (while o6
                               (let*
                                 ((k
@@ -1392,8 +1392,8 @@
                                       (keywordp
                                        (car o6))
                                       (car o6)
-                                    (setq i18
-                                          (1+ i18))))
+                                    (setq i22
+                                          (1+ i22))))
                                  (a6
                                   (if
                                       (keywordp
@@ -1466,7 +1466,7 @@
                     (if
                         (listp o70)
                         (let*
-                          ((i19 -1))
+                          ((i23 -1))
                           (while o70
                             (let*
                               ((k
@@ -1474,8 +1474,8 @@
                                     (keywordp
                                      (car o70))
                                     (car o70)
-                                  (setq i19
-                                        (1+ i19))))
+                                  (setq i23
+                                        (1+ i23))))
                                (a7
                                 (if
                                     (keywordp
@@ -1531,7 +1531,7 @@
                     (if
                         (listp o80)
                         (let*
-                          ((i20 -1))
+                          ((i24 -1))
                           (while o80
                             (let*
                               ((i9
@@ -1539,8 +1539,8 @@
                                     (keywordp
                                      (car o80))
                                     (car o80)
-                                  (setq i20
-                                        (1+ i20))))
+                                  (setq i24
+                                        (1+ i24))))
                                (a8
                                 (if
                                     (keywordp
@@ -1641,7 +1641,7 @@
                                 (if
                                     (listp o9)
                                     (let*
-                                      ((i21 -1))
+                                      ((i25 -1))
                                       (while o9
                                         (let*
                                           ((k
@@ -1649,8 +1649,8 @@
                                                 (keywordp
                                                  (car o9))
                                                 (car o9)
-                                              (setq i21
-                                                    (1+ i21))))
+                                              (setq i25
+                                                    (1+ i25))))
                                            (a9
                                             (if
                                                 (keywordp
@@ -1744,7 +1744,7 @@
                                 (if
                                     (listp o10)
                                     (let*
-                                      ((i22 -1))
+                                      ((i26 -1))
                                       (while o10
                                         (let*
                                           ((k
@@ -1752,8 +1752,8 @@
                                                 (keywordp
                                                  (car o10))
                                                 (car o10)
-                                              (setq i22
-                                                    (1+ i22))))
+                                              (setq i26
+                                                    (1+ i26))))
                                            (a10
                                             (if
                                                 (keywordp
@@ -1822,7 +1822,7 @@
                       (if
                           (listp o110)
                           (let*
-                            ((i23 -1))
+                            ((i27 -1))
                             (while o110
                               (let*
                                 ((k
@@ -1830,8 +1830,8 @@
                                       (keywordp
                                        (car o110))
                                       (car o110)
-                                    (setq i23
-                                          (1+ i23))))
+                                    (setq i27
+                                          (1+ i27))))
                                  (a11
                                   (if
                                       (keywordp
@@ -2103,7 +2103,7 @@
                           (if
                               (listp o12)
                               (let*
-                                ((i24 -1))
+                                ((i28 -1))
                                 (while o12
                                   (let*
                                     ((k
@@ -2111,8 +2111,8 @@
                                           (keywordp
                                            (car o12))
                                           (car o12)
-                                        (setq i24
-                                              (1+ i24))))
+                                        (setq i28
+                                              (1+ i28))))
                                      (a12
                                       (if
                                           (keywordp
@@ -2409,15 +2409,28 @@
                            (list
                              (make-hash-table :test 'eq)))))
     (let*
-      ((x40
+      ((x50
         (progn
-          (y-map
-           #'(lambda
-               (m)
-               (progn
-                 (y-macroexpand
-                  (cons 'define-macro m))))
-           definitions)
+          (let*
+            ((x60 definitions))
+            (progn
+              (let*
+                ((n18
+                  (y-length x60)))
+                (progn
+                  (let*
+                    ((i13 0))
+                    (progn
+                      (while
+                        (< i13 n18)
+                        (let*
+                          ((m
+                            (y-get x60 i13)))
+                          (progn
+                            (y-macroexpand
+                             (cons 'define-macro m))))
+                        (setq i13
+                              (+ i13 1)))))))))
           (cons 'progn
                 (y-macroexpand body)))))
       (progn
@@ -2425,7 +2438,7 @@
           (setq y-environment
                 (y-apply 'vector
                          (y-almost y-environment)))
-          x40)))))))
+          x50)))))))
 (y-setenv 'let-symbol :macro
           #'(lambda
               (expansions &rest body)
@@ -2441,15 +2454,29 @@
                                            (list
                                              (make-hash-table :test 'eq)))))
                     (let*
-                      ((x60
+                      ((x90
                         (progn
-                          (mapc
-                           #'(lambda
-                               (x)
-                               (progn
-                                 (y-macroexpand
-                                  (cons 'define-symbol x))))
-                           (y-pair expansions))
+                          (let*
+                            ((x100
+                              (y-pair expansions)))
+                            (progn
+                              (let*
+                                ((n20
+                                  (y-length x100)))
+                                (progn
+                                  (let*
+                                    ((i15 0))
+                                    (progn
+                                      (while
+                                        (< i15 n20)
+                                        (let*
+                                          ((x
+                                            (y-get x100 i15)))
+                                          (progn
+                                            (y-macroexpand
+                                             (cons 'define-symbol x))))
+                                        (setq i15
+                                              (+ i15 1)))))))))
                           (cons 'progn
                                 (y-macroexpand body)))))
                       (progn
@@ -2457,7 +2484,7 @@
                           (setq y-environment
                                 (y-apply 'vector
                                          (y-almost y-environment)))
-                          x60))))))))
+                          x90))))))))
 (y-setenv 'when-compiling :macro
           #'(lambda
               (&rest body)

@@ -549,17 +549,16 @@
 
   (define-macro let-macro (definitions &rest body)
     (with-frame
-      (map (fn (m)
-             (macroexpand `(define-macro ,@m)))
-           definitions)
+      (step m definitions
+        (macroexpand `(define-macro ,@m)))
       `(progn ,@(macroexpand body))))
 
   (define-macro let-symbol (expansions &rest body)
     (if (none? expansions)
         `(progn ,@(macroexpand body))
       (with-frame
-        (mapc (fn (x) (macroexpand `(define-symbol ,@x)))
-              (pair expansions))
+        (step x (pair expansions)
+          (macroexpand `(define-symbol ,@x)))
         `(progn ,@(macroexpand body)))))
 
   (define-macro when-compiling (&rest body)
