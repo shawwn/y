@@ -439,15 +439,15 @@
 
   (define-global macroexpand (form)
     (let s (symbol-expansion form)
-      (if? s (macroexpand s)
-           (atom form) form
-         (let x (macroexpand (hd form))
-           (if? (eq x 'quote) form
-                (eq x '\`)
-                (macroexpand (funcall 'macroexpand form))
-                (macro? x)
-                (macroexpand (funcall 'apply (macro-function x) (tl form)))
-              (cons x (mapcar 'y-macroexpand (tl form))))))))
+      (if s (macroexpand s)
+        (if (atom form) form
+          (let x (macroexpand (hd form))
+            (if? (eq x 'quote) form
+                 (eq x '\`)
+                 (macroexpand (funcall 'macroexpand form))
+                 (macro? x)
+                 (macroexpand (funcall 'apply (macro-function x) (tl form)))
+                 (cons x (mapcar 'y-macroexpand (tl form)))))))))
 
   (define-global expand (form)
     (macroexpand-all (y-macroexpand form)))
