@@ -511,13 +511,6 @@
               (type-of x))))
       (y-setenv 'type :symbol 'y-type))
     (progn
-      (defalias 'y-string-p
-        #'(lambda
-            (x)
-            (progn
-              (stringp x))))
-      (y-setenv 'string\? :symbol 'y-string-p))
-    (progn
       (defalias 'y-number-p
         #'(lambda
             (x)
@@ -526,16 +519,6 @@
                (integerp x)
                (numberp x)))))
       (y-setenv 'number\? :symbol 'y-number-p))
-    (progn
-      (defalias 'y-function-p
-        #'(lambda
-            (x)
-            (progn
-              (and
-               (not
-                (symbolp x))
-               (functionp x)))))
-      (y-setenv 'function\? :symbol 'y-function-p))
     (progn
       (defalias 'y-obj-p
         #'(lambda
@@ -555,7 +538,7 @@
               (or
                (y-nil-p x)
                (symbolp x)
-               (y-string-p x)
+               (stringp x)
                (y-number-p x)))))
       (y-setenv 'atom\? :symbol 'y-atom-p))
     (progn

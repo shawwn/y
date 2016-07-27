@@ -177,9 +177,7 @@
 
   (define-global type (x) (type-of x))
 
-  (define-global string? (x) (stringp x))
   (define-global number? (x) (or (integerp x) (numberp x)))
-  (define-global function? (x) (and (not (symbolp x)) (functionp x)))
 
   (define-global obj? (x) (hash-table-p x))
 
@@ -187,7 +185,7 @@
     `(make-hash-table :test 'eq))
 
   (define-global atom? (x)
-    (or (nil? x) (symbolp x) (string? x) (number? x)))
+    (or (nil? x) (symbolp x) (stringp x) (number? x)))
 
   (define-global clip (s from &optional upto)
     (let (n (length s)
