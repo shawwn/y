@@ -8,9 +8,9 @@
          (name (file-name-base path))
          (dir (file-name-directory path))
          (file (expand-file-name (concat "bin/" name ".el") dir)))
-    (if (file-exists-p (concat file "c"))
-        (load-file (concat file "c"))
-      (load-file file))
+    ;; (if (file-exists-p (concat file "c"))
+    ;;     (load-file (concat file "c"))
+    (load-file file)
     (when (file-newer-than-file-p path file)
       (let* ((forms (with-temp-buffer
                       (insert-file-contents-literally path)
