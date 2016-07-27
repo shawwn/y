@@ -10,8 +10,8 @@
          (file (expand-file-name (concat "bin/" name ".el") dir)))
     ;; (if (file-exists-p (concat file "c"))
     ;;     (load-file (concat file "c"))
-    (load-file file)
     (when (file-newer-than-file-p path file)
+      (load-file file)
       (let* ((forms (with-temp-buffer
                       (insert-file-contents-literally path)
                       (car (read-from-string (concat "(" (buffer-string) ")"))))))
@@ -19,7 +19,7 @@
           (insert ";;; -*- lexical-binding: t -*-\n")
           (insert (with-output-to-string
                     ;; (message "expanding...")
-                    (let* ((form (funcall 'y-expand `(progn ,@(cdr forms)))))
+                    (let* ((form (funcall 'macroexpand-all `(progn ,@(cdr forms)))))
                       ;; (message "pretty-printing...")
                       (pp form))))
           (untabify (point-min) (point-max))
@@ -77,7 +77,7 @@
 
 (put 'y-get 'gv-expander
      #'(lambda (f place idx)
-         (gv-letplace (getter setter) place
+         (gv-letplace (getter _setter) place
            (funcall f `(y-get ,getter ,idx)
                     #'(lambda (val)
                         (y-let-unique (k v)
@@ -86,30 +86,73 @@
                              (y-set ,getter (y-put ,getter ,k ,v))
                              ,v)))))))
 
-(defsubst y-put (h k &optional v)
-  (if (hash-table-p h)
-      (progn (puthash k v h) h)
-    (let* ((l h))
-      (if (listp h)
-          (catch 'y-break
-            (when (or (keywordp k) (>= k 0))
-              (when (null l)
-                (setq l (if (keywordp k) (list k nil) (list nil)))
-                (setq h l))
-              (y-%for h var _val
-                (when (eq var k)
-                  (if (keywordp k)
-                      (setcar (cdr h) v)
-                    (setq h (setcar h v)))
-                  (throw 'y-break l))
-                (when (null (y-next h))
-                  (if (keywordp k)
-                      (nconc h (list k v))
-                    (nconc h (list nil)))))))
-        (aset h k v))
-      l)))
+(defun y-put (h k &rest args)
+  (let ((v (car args))
+        (wipe? (null args)))
+    (if (hash-table-p h)
+        (progn
+          (if wipe?
+              (if (integerp k)
+                  (let ((n (y-length h))
+                        (i k)
+                        (unset (list nil)))
+                    (if (and (>= i 0) (<= i (1- n)))
+                        (progn
+                          (while (< i n)
+                            (let ((x (gethash (1+ i) h unset)))
+                              (if (eq x unset)
+                                  (remhash i h)
+                                (puthash i x h)))
+                            (incf i))
+                          (remhash i h))
+                      (remhash k h)))
+                (remhash k h))
+            (puthash k v h))
+          h)
+      (let* ((l h))
+        (if (listp h)
+            (catch 'y-break
+              (if wipe?
+                  (let ((l1 h)
+                        (p nil)
+                        (head? t))
+                    (y-%for h var _val
+                      (if (eq var k)
+                          (if head?
+                              (progn (setq l1 (if (keywordp k) (cddr h) (cdr h)))
+                                     (setq h l1))
+                            (progn (setcdr (if (keywordp (car p)) (cdr p) p)
+                                           (if (keywordp k) (cddr h) (cdr h)))
+                                   (setq h p)))
+                        (setq head? nil))
+                      (setq p h))
+                    (setq l l1))
+                (when (or (keywordp k) (>= k 0))
+                  (when (null l)
+                    (setq l (if (keywordp k) (list k nil) (list nil)))
+                    (setq h l))
+                  (y-%for h var _val
+                    (when (eq var k)
+                      (if (keywordp k)
+                          (setcar (cdr h) v)
+                        (setq h (setcar h v)))
+                      (throw 'y-break l))
+                    (when (null (y-next h))
+                      (if (keywordp k)
+                          (nconc h (list k v))
+                        (nconc h (list nil))))))))
+          (if wipe?
+              (error (format "Can't wipe index %s of %S" k h))
+            (aset h k v)))
+        l))))
 
-(defsubst y-length (h &optional upto)
+(defmacro y-wipe (place)
+  (gv-letplace (getter _setter) place
+    (if (eq 'y-get (car-safe getter))
+        `(y-set ,(cadr getter) (y-put ,@(cdr getter)))
+      (error (format "Can't wipe %S" place)))))
+
+(defun y-length (h &optional upto)
   (catch 'y-break
     (if (listp h)
         (let* ((n -1))
@@ -157,6 +200,7 @@
   (define-symbol let-unique y-let-unique)
   (define-symbol at get)
   (define-macro set args `(y-set ,@args))
+  (define-macro wipe args `(y-wipe ,@args))
   (define-symbol get y-get)
   (define-symbol \# y-length)
   (define-symbol = eql)
