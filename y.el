@@ -296,7 +296,7 @@
   (define-global reduce (f x)
     (if (none? x) nil
         (one? x) (hd x)
-       (funcall f (hd x) (reduce f (tl x)))))
+      (funcall f (hd x) (reduce f (tl x)))))
 
   (define-global join ls
     (if (two? ls)
@@ -537,19 +537,19 @@
   (define-macro let (bs &rest body)
     (if (and bs (atom bs)) `(let (,bs ,(hd body)) ,@(tl body))
         (none? bs) `(progn ,@body)
-       (let ((lh rh :rest bs2) bs
-             (var val :rest bs1) (bind lh rh))
-         (let renames ()
-           (if (or (bound? var) (toplevel?))
-               (let var1 (unique var)
-                 (set renames (list var var1))
-                 (set var var1))
-             (setenv var :variable t))
-           (let form `(let ,(join bs1 bs2) ,@body)
-             (unless (none? renames)
-               (set form `(let-symbol ,renames ,form)))
-             `(let* ((,var ,val))
-                ,(macroexpand form)))))))
+      (let ((lh rh :rest bs2) bs
+            (var val :rest bs1) (bind lh rh))
+        (let renames ()
+          (if (or (bound? var) (toplevel?))
+              (let var1 (unique var)
+                (set renames (list var var1))
+                (set var var1))
+            (setenv var :variable t))
+          (let form `(let ,(join bs1 bs2) ,@body)
+            (unless (none? renames)
+              (set form `(let-symbol ,renames ,form)))
+            `(let* ((,var ,val))
+               ,(macroexpand form)))))))
 
   (define-macro join! (a &rest bs)
     `(set ,a (join ,a ,@bs)))
@@ -584,10 +584,10 @@
                (listp ,o)
                (y-%for ,o ,k ,a
                  (funcall ,f ,k ,a))
-               (let ,n (\# ,o)
-                 (for ,k ,n
-                   (let ,a (at ,o ,k)
-                     (funcall ,f ,k ,a)))))))))
+             (let ,n (\# ,o)
+               (for ,k ,n
+                 (let ,a (at ,o ,k)
+                   (funcall ,f ,k ,a)))))))))
 )
 
 (provide 'y)
