@@ -10,8 +10,8 @@
          (file (expand-file-name (concat "bin/" name ".el") dir)))
     ;; (if (file-exists-p (concat file "c"))
     ;;     (load-file (concat file "c"))
+    (load-file file)
     (when (file-newer-than-file-p path file)
-      (load-file file)
       (let* ((forms (with-temp-buffer
                       (insert-file-contents-literally path)
                       (car (read-from-string (concat "(" (buffer-string) ")"))))))
@@ -173,6 +173,9 @@
             (+ n 1))
         (length h)))))
 
+(defmacro y-%if (&rest args)
+  `(if ,@args))
+
 (defmacro y-do (&rest body)
   (let* ((y-environment (apply 'vector (append y-environment nil))))
     `(progn ,@(mapcar 'y-macroexpand body))))
@@ -205,6 +208,7 @@
   (define-symbol \# y-length)
   (define-symbol = eql)
   (define-symbol environment y-environment)
+  (define-symbol %if y-%if)
 
   (define-global nil? (x)
     (= x nil))
@@ -290,8 +294,8 @@
           (dec i)))))
 
   (define-global reduce (f x)
-    (if? (none? x) nil
-         (one? x) (hd x)
+    (if (none? x) nil
+        (one? x) (hd x)
        (funcall f (hd x) (reduce f (tl x)))))
 
   (define-global join ls
@@ -484,12 +488,12 @@
       (if s (macroexpand s)
         (if (atom form) form
           (let x (macroexpand (hd form))
-            (if? (eq x 'quote) form
-                 (eq x '\`)
-                 (macroexpand (funcall 'macroexpand form))
-                 (macro? x)
-                 (macroexpand (funcall 'apply (macro-function x) (tl form)))
-                 (cons x (mapcar 'y-macroexpand (tl form)))))))))
+            (if (eq x 'quote) form
+                (eq x '\`)
+                (macroexpand (funcall 'macroexpand form))
+                (macro? x)
+                (macroexpand (funcall 'apply (macro-function x) (tl form)))
+              (cons x (mapcar 'y-macroexpand (tl form)))))))))
 
   (define-global expand (form)
     (macroexpand-all (y-macroexpand form)))
@@ -498,11 +502,11 @@
     (funcall 'eval (macroexpand form) t))
 
   (define expand-if ((a b :rest c))
-    (if? (some? c) `((if ,a ,b ,@(expand-if c)))
-         (is? b) `((if ,a ,b))
-         (is? a) (list a)))
+    (if (some? c) `((%if ,a ,b ,@(expand-if c)))
+        (is? b) `((%if ,a ,b))
+        (is? a) (list a)))
 
-  (define-macro if? branches
+  (define-macro if branches
     (hd (expand-if branches)))
 
   (define-macro with (x v &rest body)
@@ -565,8 +569,8 @@
     (eval `(progn ,@body)))
 
   (define-macro let (bs &rest body)
-    (if? (and bs (atom bs)) `(let (,bs ,(hd body)) ,@(tl body))
-         (none? bs) `(progn ,@body)
+    (if (and bs (atom bs)) `(let (,bs ,(hd body)) ,@(tl body))
+        (none? bs) `(progn ,@body)
        (let ((lh rh :rest bs2) bs
              (var val :rest bs1) (bind lh rh))
          (let renames ()
@@ -609,11 +613,11 @@
                     (if (> (\# x) 1) x
                       (list (unique 'i) (hd x)))))
         `(let (,o ,l ,f (fn (,k ,v) ,@body))
-           (if? (hash-table-p ,o)
-                (maphash ,f ,o)
-                (listp ,o)
-                (y-%for ,o ,k ,a
-                  (funcall ,f ,k ,a))
+           (if (hash-table-p ,o)
+               (maphash ,f ,o)
+               (listp ,o)
+               (y-%for ,o ,k ,a
+                 (funcall ,f ,k ,a))
                (let ,n (\# ,o)
                  (for ,k ,n
                    (let ,a (at ,o ,k)
