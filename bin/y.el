@@ -1916,9 +1916,9 @@
                                 (if
                                     (y--macro-p x)
                                     (y-macroexpand
-                                     (funcall 'apply
-                                              (y--macro-function x)
-                                              (y-tl form)))
+                                     (y-apply
+                                      (y--macro-function x)
+                                      (y-tl form)))
                                   (cons x
                                         (mapcar 'y-macroexpand
                                                 (y-tl form))))))))))))))))

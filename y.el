@@ -458,7 +458,7 @@
                 (eq x '\`)
                 (macroexpand (funcall 'macroexpand form))
                 (macro? x)
-                (macroexpand (funcall 'apply (macro-function x) (tl form)))
+                (macroexpand (apply (macro-function x) (tl form)))
               (cons x (mapcar 'y-macroexpand (tl form)))))))))
 
   (define-global expand (form)
