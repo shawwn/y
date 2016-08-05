@@ -366,40 +366,6 @@
         (throw 'y-break nil))
       t))
 
-  (define-global stash (args)
-    (let l () ;(cut args 0)
-      (step x args
-        (add l x))
-      (when (keys? args)
-        (let p (if (obj? args) (obj) ())
-          (each (k v) args
-            (unless (number? k)
-              (set (get p k) v)))
-          (set (get p :_stash) t)
-          (add l p)))
-      l))
-
-  (define-global unstash (args)
-    (if (none? args) (obj)
-      (let l (last args)
-        (if (and (or (listp l) (obj? l)) (get l :_stash))
-            (with args1 (almost args)
-              (each (k v) l
-                (unless (= k :_stash)
-                  (set (get args1 k) v))))
-          args))))
-
-  (define-global destash! (l args1)
-    (if (and (or (listp l) (obj? l)) (get l :_stash))
-        (each (k v) l
-          (unless (= k :_stash)
-            (set (get args1 k) v)))
-      l))
-
-  (define-global apply (f args)
-    (let args1 (stash args)
-      (funcall 'apply f args1)))
-
   (define-global toplevel? ()
     (one? environment))
 
