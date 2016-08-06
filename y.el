@@ -185,7 +185,7 @@
 (y-do
   (defvar y-environment (list (obj)))
 
-  (define-global setenv (k &rest ks)
+  (define-global setenv (k :rest ks)
     (let (i (if (memq :toplevel ks) 0 (- (\# environment) 1))
           frame (at environment i)
           entry (or (get frame k) (obj)))
