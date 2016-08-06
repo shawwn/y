@@ -415,11 +415,12 @@
                #'(lambda
                    (&rest body)
                    (let*
-                       ((y-environment
+                       ((max-lisp-eval-depth 4450)
+                        (y-environment
                          (apply 'vector
                                 (append y-environment nil))))
-                     (cons 'progn
-                           (mapcar 'y-macroexpand body))))))
+                     (macroexp-progn
+                      (mapcar 'y-macroexpand body))))))
        (progn
          (defvar y-environment
            (list
@@ -1923,14 +1924,6 @@
                                              (mapcar 'y-macroexpand
                                                      (y-tl form))))))))))))))))
            (y-setenv 'macroexpand :symbol 'y-macroexpand))
-         (progn
-           (defalias 'y-expand
-             #'(lambda
-                 (form)
-                 (progn
-                   (macroexpand-all
-                    (y-macroexpand form)))))
-           (y-setenv 'expand :symbol 'y-expand))
          (progn
            (defalias 'y-eval
              #'(lambda

@@ -163,8 +163,9 @@
   `(if ,@args))
 
 (defmacro y-do (&rest body)
-  (let* ((y-environment (apply 'vector (append y-environment nil))))
-    `(progn ,@(mapcar 'y-macroexpand body))))
+  (let* ((max-lisp-eval-depth 4450)
+         (y-environment (apply 'vector (append y-environment nil))))
+    (macroexp-progn (mapcar 'y-macroexpand body))))
 
 (y-do
   (defvar y-environment (list (obj)))
@@ -446,9 +447,6 @@
                 (macro? x)
                 (macroexpand (apply (macro-function x) (tl form)))
               (cons x (mapcar 'y-macroexpand (tl form)))))))))
-
-  (define-global expand (form)
-    (macroexpand-all (y-macroexpand form)))
 
   (define-global eval (form)
     (funcall 'eval (macroexpand form) t))
