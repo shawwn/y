@@ -1916,7 +1916,7 @@
                                 (if
                                     (y--macro-p x)
                                     (y-macroexpand
-                                     (y-apply
+                                     (apply
                                       (y--macro-function x)
                                       (y-tl form)))
                                   (cons x
@@ -2102,10 +2102,10 @@
                   (progn
                     (progn
                       (setq y-environment
-                            (y-apply 'vector
-                                     (append y-environment
-                                             (list
-                                              (make-hash-table :test 'eq)))))
+                            (apply 'vector
+                                   (append y-environment
+                                           (list
+                                            (make-hash-table :test 'eq)))))
                       (let*
                           ((x40
                             (progn
@@ -2134,8 +2134,8 @@
                         (progn
                           (progn
                             (setq y-environment
-                                  (y-apply 'vector
-                                           (y-almost y-environment)))
+                                  (apply 'vector
+                                         (y-almost y-environment)))
                             x40)))))))
     (y-setenv 'let-symbol :macro
               #'(lambda
@@ -2147,10 +2147,10 @@
                               (y-macroexpand body))
                       (progn
                         (setq y-environment
-                              (y-apply 'vector
-                                       (append y-environment
-                                               (list
-                                                (make-hash-table :test 'eq)))))
+                              (apply 'vector
+                                     (append y-environment
+                                             (list
+                                              (make-hash-table :test 'eq)))))
                         (let*
                             ((x80
                               (progn
@@ -2180,8 +2180,8 @@
                           (progn
                             (progn
                               (setq y-environment
-                                    (y-apply 'vector
-                                             (y-almost y-environment)))
+                                    (apply 'vector
+                                           (y-almost y-environment)))
                               x80))))))))
     (y-setenv 'when-compiling :macro
               #'(lambda
