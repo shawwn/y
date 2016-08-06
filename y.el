@@ -356,6 +356,10 @@
   (define-global toplevel? ()
     (one? environment))
 
+  (define-global print (x)
+    (princ (format "%s\n" x))
+    nil)
+
   (define id (x)
     (let s (append (if (symbolp x) (symbol-name x) x) nil)
       (when (eq ?? (get s (edge s)))
@@ -573,9 +577,43 @@
                  (let ,a (at ,o ,k)
                    (funcall ,f ,k ,a)))))))))
 
-  (define-global compile-file (path module-name)
-    (let* ((y-module module-name)
-           (max-lisp-eval-depth 1500)
+  (define eval-print (form)
+    (condition-case err
+        (let x (eval form)
+          (if (is? x) (print (format "%S" x))))
+      (error (print (format "error: %s" (error-message-string err))))))
+
+  (define read-string (s &optional more)
+    (if more
+        (condition-case nil
+            (car (read-from-string s))
+          (end-of-file more))
+      (car (read-from-string s))))
+
+  (define rep (s)
+    (eval-print (read-string s)))
+
+  (define repl ()
+    (let buf ""
+      (let rep1 (fn (s)
+                  (set buf (concat buf s))
+                  (let (more (obj)
+                        form (read-string buf more))
+                    (unless (= form more)
+                      (eval-print form)
+                      (set buf "")
+                      (princ "> "))))
+        (princ "> ")
+        (catch 'y-break
+          (while t
+            (let s (read-from-minibuffer "")
+              (if (and s (not (string= s ":a")))
+                  (funcall rep1 (concat s "\n"))
+                (throw 'y-break nil))))))))
+
+  (define-global compile-file (path &optional module-name)
+    (let* ((name (or module-name (file-name-base path)))
+           (y-module name)
            (forms (with-temp-buffer
                     (insert-file-contents-literally path)
                     (car (read-from-string (concat "(" (buffer-string) ")")))))
@@ -591,6 +629,53 @@
     (with-temp-buffer
       (insert data)
       (write-region (point-min) (point-max) path nil t)))
+
+  (define run-file (path)
+    (funcall 'load-file path))
+
+  (define usage ()
+    (print "usage: y [options] <object files>")
+    (print "options:")
+    (print "  -c <input>\tCompile input file")
+    (print "  -o <output>\tOutput file")
+    (print "  -e <expr>\tExpression to evaluate"))
+
+  (define-global main (args)
+    (let arg (hd args)
+      (if (or (string= arg "-h")
+              (string= arg "--help"))
+          (usage)
+        (let (pre ()
+              input nil
+              output nil
+              target1 nil
+              expr nil
+              n (\# args))
+          (for i n
+            (let a (at args i)
+              (if (or (string= a "-c")
+                      (string= a "-o")
+                      (string= a "-e"))
+                  (if (= i (- n 1))
+                      (print (format "missing argument for %S" a))
+                    (progn (inc i)
+                           (let val (at args i)
+                             (if (string= a "-c") (set input val)
+                                 (string= a "-o") (set output val)
+                                 (string= a "-e") (set expr val)))))
+                (add pre a))))
+          (step file pre
+            (run-file file))
+          (if (nil? input) (if expr (rep expr) (repl))
+            (let code (compile-file input)
+              (if (or (nil? output) (string= output "-"))
+                  (print code)
+                (write-file output code))))))))
+
+  (when noninteractive
+    (let args command-line-args-left
+      (set command-line-args-left nil)
+      (main args)))
 )
 
 (provide 'y)

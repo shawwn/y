@@ -468,7 +468,7 @@
                                      (if
                                          (listp o0)
                                          (let*
-                                             ((i15 -1))
+                                             ((i16 -1))
                                            (while o0
                                              (let*
                                                  ((k
@@ -476,8 +476,8 @@
                                                        (keywordp
                                                         (car o0))
                                                        (car o0)
-                                                     (setq i15
-                                                           (1+ i15))))
+                                                     (setq i16
+                                                           (1+ i16))))
                                                   (a0
                                                    (if
                                                        (keywordp
@@ -769,7 +769,7 @@
                                              (if
                                                  (listp o1)
                                                  (let*
-                                                     ((i16 -1))
+                                                     ((i17 -1))
                                                    (while o1
                                                      (let*
                                                          ((k
@@ -777,8 +777,8 @@
                                                                (keywordp
                                                                 (car o1))
                                                                (car o1)
-                                                             (setq i16
-                                                                   (1+ i16))))
+                                                             (setq i17
+                                                                   (1+ i17))))
                                                           (a1
                                                            (if
                                                                (keywordp
@@ -846,7 +846,7 @@
                                  (if
                                      (listp o2)
                                      (let*
-                                         ((i17 -1))
+                                         ((i18 -1))
                                        (while o2
                                          (let*
                                              ((k
@@ -854,8 +854,8 @@
                                                    (keywordp
                                                     (car o2))
                                                    (car o2)
-                                                 (setq i17
-                                                       (1+ i17))))
+                                                 (setq i18
+                                                       (1+ i18))))
                                               (a2
                                                (if
                                                    (keywordp
@@ -1048,7 +1048,7 @@
                                                    (if
                                                        (listp o3)
                                                        (let*
-                                                           ((i18 -1))
+                                                           ((i19 -1))
                                                          (while o3
                                                            (let*
                                                                ((k
@@ -1056,8 +1056,8 @@
                                                                      (keywordp
                                                                       (car o3))
                                                                      (car o3)
-                                                                   (setq i18
-                                                                         (1+ i18))))
+                                                                   (setq i19
+                                                                         (1+ i19))))
                                                                 (a3
                                                                  (if
                                                                      (keywordp
@@ -1113,7 +1113,7 @@
                                                    (if
                                                        (listp o4)
                                                        (let*
-                                                           ((i19 -1))
+                                                           ((i20 -1))
                                                          (while o4
                                                            (let*
                                                                ((k
@@ -1121,8 +1121,8 @@
                                                                      (keywordp
                                                                       (car o4))
                                                                      (car o4)
-                                                                   (setq i19
-                                                                         (1+ i19))))
+                                                                   (setq i20
+                                                                         (1+ i20))))
                                                                 (a4
                                                                  (if
                                                                      (keywordp
@@ -1187,7 +1187,7 @@
                                (if
                                    (listp o50)
                                    (let*
-                                       ((i20 -1))
+                                       ((i21 -1))
                                      (while o50
                                        (let*
                                            ((i6
@@ -1195,8 +1195,8 @@
                                                  (keywordp
                                                   (car o50))
                                                  (car o50)
-                                               (setq i20
-                                                     (1+ i20))))
+                                               (setq i21
+                                                     (1+ i21))))
                                             (a5
                                              (if
                                                  (keywordp
@@ -1386,7 +1386,7 @@
                                  (if
                                      (listp o6)
                                      (let*
-                                         ((i21 -1))
+                                         ((i22 -1))
                                        (while o6
                                          (let*
                                              ((k
@@ -1394,8 +1394,8 @@
                                                    (keywordp
                                                     (car o6))
                                                    (car o6)
-                                                 (setq i21
-                                                       (1+ i21))))
+                                                 (setq i22
+                                                       (1+ i22))))
                                               (a6
                                                (if
                                                    (keywordp
@@ -1468,7 +1468,7 @@
                                (if
                                    (listp o70)
                                    (let*
-                                       ((i22 -1))
+                                       ((i23 -1))
                                      (while o70
                                        (let*
                                            ((k
@@ -1476,8 +1476,8 @@
                                                  (keywordp
                                                   (car o70))
                                                  (car o70)
-                                               (setq i22
-                                                     (1+ i22))))
+                                               (setq i23
+                                                     (1+ i23))))
                                             (a7
                                              (if
                                                  (keywordp
@@ -1533,7 +1533,7 @@
                                (if
                                    (listp o80)
                                    (let*
-                                       ((i23 -1))
+                                       ((i24 -1))
                                      (while o80
                                        (let*
                                            ((i9
@@ -1541,8 +1541,8 @@
                                                  (keywordp
                                                   (car o80))
                                                  (car o80)
-                                               (setq i23
-                                                     (1+ i23))))
+                                               (setq i24
+                                                     (1+ i24))))
                                             (a8
                                              (if
                                                  (keywordp
@@ -1581,6 +1581,15 @@
                  (progn
                    (y-one-p y-environment))))
            (y-setenv 'toplevel\? :symbol 'y-toplevel-p))
+         (progn
+           (defalias 'y-print
+             #'(lambda
+                 (x)
+                 (progn
+                   (princ
+                    (format "%s\n" x))
+                   nil)))
+           (y-setenv 'print :symbol 'y-print))
          (progn
            (defalias 'y--id
              #'(lambda
@@ -1802,7 +1811,7 @@
                                      (if
                                          (listp o9)
                                          (let*
-                                             ((i24 -1))
+                                             ((i25 -1))
                                            (while o9
                                              (let*
                                                  ((k
@@ -1810,8 +1819,8 @@
                                                        (keywordp
                                                         (car o9))
                                                        (car o9)
-                                                     (setq i24
-                                                           (1+ i24))))
+                                                     (setq i25
+                                                           (1+ i25))))
                                                   (a9
                                                    (if
                                                        (keywordp
@@ -2360,13 +2369,100 @@
                                                                    (list 'at o k)
                                                                    (list 'funcall f k a)))))))))))))))
          (progn
-           (defalias 'y-compile-file
+           (defalias 'y--eval-print
              #'(lambda
-                 (path y--module-name)
+                 (form)
+                 (progn
+                   (condition-case err
+                       (let*
+                           ((x10
+                             (y-eval form)))
+                         (progn
+                           (progn
+                             (if
+                                 (y-is-p x10)
+                                 (y-print
+                                  (format "%S" x10))))))
+                     (error
+                      (y-print
+                       (format "error: %s"
+                               (error-message-string err))))))))
+           (y-setenv 'eval-print :symbol 'y--eval-print))
+         (progn
+           (defalias 'y--read-string
+             #'(lambda
+                 (s &optional more)
+                 (progn
+                   (if more
+                       (condition-case nil
+                           (car
+                            (read-from-string s))
+                         (end-of-file more))
+                     (car
+                      (read-from-string s))))))
+           (y-setenv 'read-string :symbol 'y--read-string))
+         (progn
+           (defalias 'y--rep
+             #'(lambda
+                 (s)
+                 (progn
+                   (y--eval-print
+                    (y--read-string s)))))
+           (y-setenv 'rep :symbol 'y--rep))
+         (progn
+           (defalias 'y--repl
+             #'(lambda nil
                  (progn
                    (let*
-                       ((y-module y--module-name)
-                        (max-lisp-eval-depth 1500)
+                       ((buf0 ""))
+                     (progn
+                       (progn
+                         (let*
+                             ((rep1
+                               #'(lambda
+                                   (s)
+                                   (progn
+                                     (setq buf0
+                                           (concat buf0 s))
+                                     (let*
+                                         ((more
+                                           (make-hash-table :test 'eq)))
+                                       (let*
+                                           ((form
+                                             (y--read-string buf0 more)))
+                                         (progn
+                                           (if
+                                               (eql form more)
+                                               nil
+                                             (y--eval-print form)
+                                             (setq buf0 "")
+                                             (princ "> ")))))))))
+                           (progn
+                             (princ "> ")
+                             (catch 'y-break
+                               (while t
+                                 (let*
+                                     ((s
+                                       (read-from-minibuffer "")))
+                                   (progn
+                                     (if
+                                         (and s
+                                              (not
+                                               (string= s ":a")))
+                                         (funcall rep1
+                                                  (concat s "\n"))
+                                       (throw 'y-break nil))))))))))))))
+           (y-setenv 'repl :symbol 'y--repl))
+         (progn
+           (defalias 'y-compile-file
+             #'(lambda
+                 (path &optional y--module-name)
+                 (progn
+                   (let*
+                       ((name
+                         (or y--module-name
+                             (file-name-base path)))
+                        (y-module name)
                         (forms
                          (let
                              ((temp-buffer
@@ -2437,5 +2533,139 @@
                          (and
                           (buffer-name temp-buffer)
                           (kill-buffer temp-buffer))))))))
-           (y-setenv 'write-file :symbol 'y-write-file)))
+           (y-setenv 'write-file :symbol 'y-write-file))
+         (progn
+           (defalias 'y--run-file
+             #'(lambda
+                 (path)
+                 (progn
+                   (funcall 'load-file path))))
+           (y-setenv 'run-file :symbol 'y--run-file))
+         (progn
+           (defalias 'y--usage
+             #'(lambda nil
+                 (progn
+                   (y-print "usage: y [options] <object files>")
+                   (y-print "options:")
+                   (y-print "  -c <input>       Compile input file")
+                   (y-print "  -o <output>      Output file")
+                   (y-print "  -e <expr>        Expression to evaluate"))))
+           (y-setenv 'usage :symbol 'y--usage))
+         (progn
+           (defalias 'y-main
+             #'(lambda
+                 (args)
+                 (progn
+                   (let*
+                       ((arg0
+                         (y-hd args)))
+                     (progn
+                       (progn
+                         (if
+                             (or
+                              (string= arg0 "-h")
+                              (string= arg0 "--help"))
+                             (y--usage)
+                           (let*
+                               ((pre nil))
+                             (let*
+                                 ((input nil))
+                               (let*
+                                   ((output nil))
+                                 (let*
+                                     ((target1 nil))
+                                   (let*
+                                       ((expr nil))
+                                     (let*
+                                         ((n
+                                           (y-length args)))
+                                       (progn
+                                         (let*
+                                             ((i 0))
+                                           (progn
+                                             (while
+                                                 (< i n)
+                                               (let*
+                                                   ((a
+                                                     (y-get args i)))
+                                                 (progn
+                                                   (if
+                                                       (or
+                                                        (string= a "-c")
+                                                        (string= a "-o")
+                                                        (string= a "-e"))
+                                                       (if
+                                                           (eql i
+                                                                (- n 1))
+                                                           (y-print
+                                                            (format "missing argument for %S" a))
+                                                         (progn
+                                                           (setq i
+                                                                 (+ i 1))
+                                                           (let*
+                                                               ((val
+                                                                 (y-get args i)))
+                                                             (progn
+                                                               (if
+                                                                   (string= a "-c")
+                                                                   (setq input val)
+                                                                 (if
+                                                                     (string= a "-o")
+                                                                     (setq output val)
+                                                                   (if
+                                                                       (string= a "-e")
+                                                                       (setq expr val))))))))
+                                                     (progn
+                                                       (let*
+                                                           ((k16
+                                                             (y-length pre))
+                                                            (v15 a))
+                                                         (setq pre
+                                                               (y-put pre k16 v15))
+                                                         v15)
+                                                       nil))))
+                                               (setq i
+                                                     (+ i 1)))))
+                                         (let*
+                                             ((x11 pre))
+                                           (let*
+                                               ((n17
+                                                 (y-length x11)))
+                                             (progn
+                                               (let*
+                                                   ((i15 0))
+                                                 (progn
+                                                   (while
+                                                       (< i15 n17)
+                                                     (let*
+                                                         ((file
+                                                           (y-get x11 i15)))
+                                                       (progn
+                                                         (y--run-file file)))
+                                                     (setq i15
+                                                           (+ i15 1))))))))
+                                         (if
+                                             (y-nil-p input)
+                                             (if expr
+                                                 (y--rep expr)
+                                               (y--repl))
+                                           (let*
+                                               ((code
+                                                 (y-compile-file input)))
+                                             (progn
+                                               (if
+                                                   (or
+                                                    (y-nil-p output)
+                                                    (string= output "-"))
+                                                   (y-print code)
+                                                 (y-write-file output code)))))))))))))))))))
+           (y-setenv 'main :symbol 'y-main))
+         (if noninteractive
+             (progn
+               (let*
+                   ((args0 command-line-args-left))
+                 (progn
+                   (progn
+                     (setq command-line-args-left nil)
+                     (y-main args0)))))))
        (provide 'y))

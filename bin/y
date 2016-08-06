@@ -1,0 +1,21 @@
+#!/bin/sh
+
+dir="$(pwd)"
+cd "$(dirname "$0")"
+home="$(pwd)"
+cd "${dir}"
+
+host="${Y_HOST}"
+if [ -z "${host}" ]
+then
+  host="$(ps -o comm | grep '/[eE]macs[^ ]*' | tail -n 1)"
+  if [ -z "${host}" ]
+  then
+    echo no host found. Start emacs or set Y_HOST to /path/to/emacs -Q --script
+    exit 1
+  fi
+  host="${host} -Q --script"
+fi
+code="y.el"
+
+exec ${host} "${home}/${code}" "$@"
