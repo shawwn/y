@@ -38,11 +38,23 @@
       (cddr h)
     (cdr h)))
 
+(cl-assert lexical-binding)
+(let* ((h (make-hash-table :test 'eq))
+       (unset (list nil)))
+  (defsubst y-%key (x)
+    (if (keywordp x)
+        (let* ((x1 (gethash x h unset)))
+          (when (eq x1 unset)
+            (setq x1 (intern (substring (symbol-name x) 1)))
+            (puthash x x1 h))
+          x1)
+      x)))
+
 (defmacro y-%for (h k v &rest body)
   (y-let-unique (i)
     `(let* ((,i -1))
        (while ,h
-         (let* ((,k (if (keywordp (car ,h)) (car ,h) (incf ,i)))
+         (let* ((,k (if (keywordp (car ,h)) (y-%key (car ,h)) (setq ,i (1+ ,i))))
                 (,v (if (keywordp (car ,h)) (cadr ,h) (car ,h))))
            ,@body)
          (setq ,h (if (keywordp (car ,h)) (cddr ,h) (cdr ,h))))
@@ -77,6 +89,7 @@
         (wipe? (null args)))
     (if (hash-table-p h)
         (progn
+          (setq k (y-%key k))
           (if wipe?
               (if (integerp k)
                   (let ((n (y-length h))
@@ -96,6 +109,8 @@
             (puthash k v h))
           h)
       (let* ((l h))
+        (if (and (symbolp k) (not (keywordp k)))
+            (setq k (intern (concat ":" (symbol-name k)))))
         (if (listp h)
             (catch 'y-break
               (if wipe?
@@ -118,10 +133,10 @@
                     (setq l (if (keywordp k) (list k nil) (list nil)))
                     (setq h l))
                   (y-%for h var _val
-                    (when (eq var k)
-                      (if (keywordp k)
-                          (setcar (cdr h) v)
-                        (setq h (setcar h v)))
+                    (when (eq var (y-%key k))
+                      (if (integerp k)
+                          (setcar h v)
+                        (setcar (cdr h) v))
                       (throw 'y-break l))
                     (when (null (y-next h))
                       (if (keywordp k)
@@ -383,13 +398,13 @@
         (id (concat prefix s)))))
 
   (define macro-function (k)
-    (getenv k :macro))
+    (getenv k 'macro))
 
   (define macro? (k)
     (macro-function k))
 
   (define symbol-expansion (k)
-    (getenv k :symbol))
+    (getenv k 'symbol))
 
   (define symbol? (k)
     (let v (symbol-expansion k)
@@ -400,7 +415,7 @@
       (catch 'y-break
         (while (>= i 0)
           (let b (get (at environment i) k)
-            (if b (throw 'y-break (get b :variable))
+            (if b (throw 'y-break (get b 'variable))
               (decf i)))))))
 
   (define bound? (x)
@@ -408,21 +423,16 @@
         (symbol? x)
         (variable? x)))
 
-  (define unkeywordify (k)
-    (if (keywordp k)
-        (intern (clip (symbol-name k) 1))
-      k))
-
   (define bind (lh rh)
     (if (atom? lh) `(,lh ,rh)
       (let-unique (var)
         (with bs (list var rh)
           (each (k v) lh
-            (let x (if (= k :rest)
+            (let x (if (= k 'rest)
                        `(cut ,var ,(\# lh))
                      `(get ,var ',k))
               (when (is? k)
-                (let k (if (= v t) (unkeywordify k) v)
+                (let k (if (= v t) k v)
                   (join! bs (bind k x))))))))))
 
   (define bind* (args body)

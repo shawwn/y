@@ -53,6 +53,37 @@
                      (cddr h)
                    (cdr h))))
          'byte-compile-inline-expand)
+       (progn
+         (or lexical-binding
+             (signal 'cl-assertion-failed
+                     (list 'lexical-binding)))
+         nil)
+       (let*
+           ((h
+             (make-hash-table :test 'eq))
+            (unset
+             (list nil)))
+         (prog1
+             (defalias 'y-%key
+               #'(lambda
+                   (x)
+                   (if
+                       (keywordp x)
+                       (let*
+                           ((x1
+                             (gethash x h unset)))
+                         (if
+                             (eq x1 unset)
+                             (progn
+                               (setq x1
+                                     (intern
+                                      (substring
+                                       (symbol-name x)
+                                       1)))
+                               (puthash x x1 h)))
+                         x1)
+                     x)))
+           'byte-compile-inline-expand))
        (defalias 'y-%for
          (cons 'macro
                #'(lambda
@@ -74,8 +105,10 @@
                                                  (list 'if
                                                        (list 'keywordp
                                                              (list 'car h))
-                                                       (list 'car h)
-                                                       (list 'incf i)))
+                                                       (list 'y-%key
+                                                             (list 'car h))
+                                                       (list 'setq i
+                                                             (list '1+ i))))
                                            (list v
                                                  (list 'if
                                                        (list 'keywordp
@@ -113,7 +146,8 @@
                                    (if
                                        (keywordp
                                         (car h))
-                                       (car h)
+                                       (y-%key
+                                        (car h))
                                      (setq i0
                                            (1+ i0))))
                                   (val
@@ -168,6 +202,8 @@
                (if
                    (hash-table-p h)
                    (progn
+                     (setq k
+                           (y-%key k))
                      (if wipe\?
                          (if
                              (integerp k)
@@ -204,6 +240,15 @@
                  (let*
                      ((l h))
                    (if
+                       (and
+                        (symbolp k)
+                        (not
+                         (keywordp k)))
+                       (setq k
+                             (intern
+                              (concat ":"
+                                      (symbol-name k)))))
+                   (if
                        (listp h)
                        (catch 'y-break
                          (if wipe\?
@@ -219,7 +264,8 @@
                                          (if
                                              (keywordp
                                               (car h))
-                                             (car h)
+                                             (y-%key
+                                              (car h))
                                            (setq i1
                                                  (1+ i1))))
                                         (_val
@@ -282,7 +328,8 @@
                                            (if
                                                (keywordp
                                                 (car h))
-                                               (car h)
+                                               (y-%key
+                                                (car h))
                                              (setq i2
                                                    (1+ i2))))
                                           (_val
@@ -292,15 +339,15 @@
                                                (cadr h)
                                              (car h))))
                                        (if
-                                           (eq var k)
+                                           (eq var
+                                               (y-%key k))
                                            (progn
                                              (if
-                                                 (keywordp k)
-                                                 (setcar
-                                                  (cdr h)
-                                                  v)
-                                               (setq h
-                                                     (setcar h v)))
+                                                 (integerp k)
+                                                 (setcar h v)
+                                               (setcar
+                                                (cdr h)
+                                                v))
                                              (throw 'y-break l)))
                                        (if
                                            (null
@@ -356,7 +403,8 @@
                                (if
                                    (keywordp
                                     (car h))
-                                   (car h)
+                                   (y-%key
+                                    (car h))
                                  (setq i3
                                        (1+ i3))))
                               (_v
@@ -475,7 +523,8 @@
                                                    (if
                                                        (keywordp
                                                         (car o0))
-                                                       (car o0)
+                                                       (y-%key
+                                                        (car o0))
                                                      (setq i16
                                                            (1+ i16))))
                                                   (a0
@@ -776,7 +825,8 @@
                                                            (if
                                                                (keywordp
                                                                 (car o1))
-                                                               (car o1)
+                                                               (y-%key
+                                                                (car o1))
                                                              (setq i17
                                                                    (1+ i17))))
                                                           (a1
@@ -853,7 +903,8 @@
                                                (if
                                                    (keywordp
                                                     (car o2))
-                                                   (car o2)
+                                                   (y-%key
+                                                    (car o2))
                                                  (setq i18
                                                        (1+ i18))))
                                               (a2
@@ -1055,7 +1106,8 @@
                                                                  (if
                                                                      (keywordp
                                                                       (car o3))
-                                                                     (car o3)
+                                                                     (y-%key
+                                                                      (car o3))
                                                                    (setq i19
                                                                          (1+ i19))))
                                                                 (a3
@@ -1120,7 +1172,8 @@
                                                                  (if
                                                                      (keywordp
                                                                       (car o4))
-                                                                     (car o4)
+                                                                     (y-%key
+                                                                      (car o4))
                                                                    (setq i20
                                                                          (1+ i20))))
                                                                 (a4
@@ -1194,7 +1247,8 @@
                                              (if
                                                  (keywordp
                                                   (car o50))
-                                                 (car o50)
+                                                 (y-%key
+                                                  (car o50))
                                                (setq i21
                                                      (1+ i21))))
                                             (a5
@@ -1393,7 +1447,8 @@
                                                (if
                                                    (keywordp
                                                     (car o6))
-                                                   (car o6)
+                                                   (y-%key
+                                                    (car o6))
                                                  (setq i22
                                                        (1+ i22))))
                                               (a6
@@ -1475,7 +1530,8 @@
                                              (if
                                                  (keywordp
                                                   (car o70))
-                                                 (car o70)
+                                                 (y-%key
+                                                  (car o70))
                                                (setq i23
                                                      (1+ i23))))
                                             (a7
@@ -1540,7 +1596,8 @@
                                              (if
                                                  (keywordp
                                                   (car o80))
-                                                 (car o80)
+                                                 (y-%key
+                                                  (car o80))
                                                (setq i24
                                                      (1+ i24))))
                                             (a8
@@ -1680,7 +1737,7 @@
              #'(lambda
                  (k)
                  (progn
-                   (y-getenv k :macro))))
+                   (y-getenv k 'macro))))
            (y-setenv 'macro-function :symbol 'y--macro-function))
          (progn
            (defalias 'y--macro-p
@@ -1694,7 +1751,7 @@
              #'(lambda
                  (k)
                  (progn
-                   (y-getenv k :symbol))))
+                   (y-getenv k 'symbol))))
            (y-setenv 'symbol-expansion :symbol 'y--symbol-expansion))
          (progn
            (defalias 'y--symbol-p
@@ -1731,7 +1788,7 @@
                                (progn
                                  (if b
                                      (throw 'y-break
-                                            (y-get b :variable))
+                                            (y-get b 'variable))
                                    (setq i10
                                          (1- i10)))))))))))))
            (y-setenv 'variable\? :symbol 'y--variable-p))
@@ -1745,19 +1802,6 @@
                     (y--symbol-p x)
                     (y--variable-p x)))))
            (y-setenv 'bound\? :symbol 'y--bound-p))
-         (progn
-           (defalias 'y--unkeywordify
-             #'(lambda
-                 (k)
-                 (progn
-                   (if
-                       (keywordp k)
-                       (intern
-                        (y-clip
-                         (symbol-name k)
-                         1))
-                     k))))
-           (y-setenv 'unkeywordify :symbol 'y--unkeywordify))
          (progn
            (defalias 'y--bind
              #'(lambda
@@ -1784,7 +1828,7 @@
                                            (let*
                                                ((x
                                                  (if
-                                                     (eql k :rest)
+                                                     (eql k 'rest)
                                                      (list 'cut var
                                                            (y-length lh))
                                                    (list 'get var
@@ -1797,8 +1841,7 @@
                                                          ((k1
                                                            (if
                                                                (eql v t)
-                                                               (y--unkeywordify k)
-                                                             v)))
+                                                               k v)))
                                                        (progn
                                                          (progn
                                                            (setq bs0
@@ -1818,7 +1861,8 @@
                                                    (if
                                                        (keywordp
                                                         (car o9))
-                                                       (car o9)
+                                                       (y-%key
+                                                        (car o9))
                                                      (setq i25
                                                            (1+ i25))))
                                                   (a9
