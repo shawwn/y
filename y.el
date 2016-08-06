@@ -1,31 +1,17 @@
 ;;; -*- lexical-binding: t -*-
 
 (eval-and-compile
-  ;; (save-buffer)
-  (defvar y-module nil)
-  (let* ((y-module "y")
-         (path (or load-file-name (buffer-file-name)))
-         (name (file-name-base path))
-         (dir (file-name-directory path))
-         (file (expand-file-name (concat "bin/" name ".el") dir)))
-    ;; (if (file-exists-p (concat file "c"))
-    ;;     (load-file (concat file "c"))
-    (load-file file)
-    (when (file-newer-than-file-p path file)
-      (let* ((forms (with-temp-buffer
-                      (insert-file-contents-literally path)
-                      (car (read-from-string (concat "(" (buffer-string) ")"))))))
-        (with-temp-buffer
-          (insert ";;; -*- lexical-binding: t -*-\n")
-          (insert (with-output-to-string
-                    ;; (message "expanding...")
-                    (let* ((form (funcall 'macroexpand-all `(progn ,@(cdr forms)))))
-                      ;; (message "pretty-printing...")
-                      (pp form))))
-          (untabify (point-min) (point-max))
-          (write-region (point-min) (point-max) file nil t)
-          (byte-compile-file file))))
-    nil))
+  (let* ((input (or load-file-name (buffer-file-name))))
+    (when (and input (file-exists-p input))
+      (let* ((name (file-name-base input))
+             (dir (file-name-directory input))
+             (output (expand-file-name (concat "bin/" name ".el") dir)))
+        (when (file-exists-p output)
+          (load-file output)
+          (unless y-module
+            (when (file-newer-than-file-p input output)
+              (y-write-file output (y-compile-file input name))))))))
+  nil)
 
 (setq-local lexical-binding t)
 
@@ -588,6 +574,25 @@
                (for ,k ,n
                  (let ,a (at ,o ,k)
                    (funcall ,f ,k ,a)))))))))
+
+  (define-global compile-file (path module-name)
+    (let* ((y-module module-name)
+           (max-lisp-eval-depth 1500)
+           (forms (with-temp-buffer
+                    (insert-file-contents-literally path)
+                    (car (read-from-string (concat "(" (buffer-string) ")")))))
+           (exprs (funcall 'macroexpand-all `(progn ,@forms))))
+      (with-temp-buffer
+        (insert ";;; -*- lexical-binding: t -*-\n")
+        (insert (with-output-to-string
+                  (pp exprs)))
+        (untabify (point-min) (point-max))
+        (buffer-string))))
+
+  (define-global write-file (path data)
+    (with-temp-buffer
+      (insert data)
+      (write-region (point-min) (point-max) path nil t)))
 )
 
 (provide 'y)
