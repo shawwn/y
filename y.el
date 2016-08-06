@@ -438,17 +438,38 @@
   (define bind* (args body)
     (if (and args (atom? args))
         (bind* `(&rest ,args) body)
-      (let (args1 () bs ())
-        (mapc (fn (x)
-                (if (atom x)
-                    (setq args1 (nconc args1 (list x)))
-                  (let-unique (id1)
-                    (setq args1 (nconc args1 (list id1)))
-                    (join! bs (list x id1)))))
-              args)
-        (list args1 (if (null bs)
-                        `(progn ,@body)
-                      `(let ,bs ,@body))))))
+      (let (rest nil args1 () bs () ks ())
+        (for i (\# args)
+          (let arg (at args i)
+            (if (= arg '&rest)
+                (set rest (at args (inc i)))
+                (atom? arg)
+                (add args1 arg)
+              (let-unique (id1)
+                (add args1 id1)
+                (join! bs (list arg id1))))))
+        (let-when x (get args 'rest)
+          (set rest x))
+        (each (k v) args
+          (unless (or (number? k) (= k 'rest))
+            (when (nil? rest)
+              (set rest (unique 'args)))
+            (let (v1 (if (= v t) k v)
+                  k1 (intern (format ":%s" k)))
+               (join! ks (list k1 v1)))))
+        (when rest
+          (add args1 '&rest)
+          (add args1 rest))
+        (when ks
+          (join! bs (list ks rest)))
+        (with l (list args1)
+          (let x (hd body)
+            (when (stringp x)
+              (add l x)
+              (set body (tl body))))
+          (if (is? bs)
+              (add l `(let ,bs ,@body))
+            (join! l body))))))
 
   (define-global macroexpand (form)
     (let s (symbol-expansion form)
@@ -473,20 +494,20 @@
   (define-macro if branches
     (hd (expand-if branches)))
 
-  (define-macro with (x v &rest body)
+  (define-macro with (x v :rest body)
     `(let (,x ,v) ,@body ,x))
 
-  (define-macro let-when (x v &rest body)
+  (define-macro let-when (x v :rest body)
     (let-unique (y)
       `(let ,y ,v
          (when ,y
            (let (,x ,y)
              ,@body)))))
 
-  (define-macro fn (args &rest body)
+  (define-macro fn (args :rest body)
     `(lambda ,@(bind* args body)))
 
-  (define-macro define-macro (name args &rest body)
+  (define-macro define-macro (name args :rest body)
     (let* ((form `(setenv ',name :macro (fn ,args ,@body))))
       (eval form)
       form))
@@ -495,14 +516,14 @@
     (setenv name :symbol expansion)
     `(setenv ',name :symbol ',expansion))
 
-  (define-macro define (name x &rest body)
+  (define-macro define (name x :rest body)
     (let var (global-id (concat (module-name) "--") name)
       (setenv name :symbol var)
       (setenv var :variable t)
       `(progn (defalias ',var (fn ,x ,@body))
               (setenv ',name :symbol ',var))))
 
-  (define-macro define-global (name x &rest body)
+  (define-macro define-global (name x :rest body)
     (let var (global-id (concat (module-name) "-") name)
       (setenv name :symbol var)
       (setenv var :variable t :toplevel t)
@@ -515,13 +536,13 @@
               (with ,x (progn ,@body)
                 (set environment (apply 'vector (almost environment)))))))
 
-  (define-macro let-macro (definitions &rest body)
+  (define-macro let-macro (definitions :rest body)
     (with-frame
       (step m definitions
         (macroexpand `(define-macro ,@m)))
       `(progn ,@(macroexpand body))))
 
-  (define-macro let-symbol (expansions &rest body)
+  (define-macro let-symbol (expansions :rest body)
     (if (none? expansions)
         `(progn ,@(macroexpand body))
       (with-frame
@@ -529,10 +550,10 @@
           (macroexpand `(define-symbol ,@x)))
         `(progn ,@(macroexpand body)))))
 
-  (define-macro when-compiling (&rest body)
+  (define-macro when-compiling body
     (eval `(progn ,@body)))
 
-  (define-macro let (bs &rest body)
+  (define-macro let (bs :rest body)
     (if (and bs (atom bs)) `(let (,bs ,(hd body)) ,@(tl body))
         (none? bs) `(progn ,@body)
       (let ((lh rh :rest bs2) bs
@@ -549,7 +570,7 @@
             `(let* ((,var ,val))
                ,(macroexpand form)))))))
 
-  (define-macro join! (a &rest bs)
+  (define-macro join! (a :rest bs)
     `(set ,a (join ,a ,@bs)))
 
   (define-macro inc (n &optional by)
@@ -558,20 +579,20 @@
   (define-macro dec (n &optional by)
     `(set ,n (- ,n ,(or by 1))))
 
-  (define-macro for (i to &rest body)
+  (define-macro for (i to :rest body)
     `(let ,i 0
        (while (< ,i ,to)
          ,@body
          (inc ,i))))
 
-  (define-macro step (v l &rest body)
+  (define-macro step (v l :rest body)
     (let-unique (x n i)
       `(let (,x ,l ,n (\# ,x))
          (for ,i ,n
            (let (,v (at ,x ,i))
              ,@body)))))
 
-  (define-macro each (x l &rest body)
+  (define-macro each (x l :rest body)
     (let-unique (o n f a)
       (let ((k v) (if (atom? x) (list (unique 'i) x)
                     (if (> (\# x) 1) x
