@@ -209,7 +209,6 @@
   (define-macro wipe args `(y-wipe ,@args))
   (define-symbol get y-get)
   (define-symbol \# y-length)
-  (define-symbol = eql)
   (define-symbol environment y-environment)
   (define-symbol %if y-%if)
 
@@ -494,6 +493,11 @@
         (is? b) `((%if ,a ,b))
         (is? a) (list a)))
 
+  (define-macro = args
+    (if (find 'stringp args)
+        `(string= ,@args)
+      `(eql ,@args)))
+
   (define-macro if branches
     (hd (expand-if branches)))
 
@@ -641,7 +645,7 @@
         (catch 'y-break
           (while t
             (let s (read-from-minibuffer "")
-              (if (and s (not (string= s ":a")))
+              (if (and s (not (= s ":a")))
                   (funcall rep1 (concat s "\n"))
                 (throw 'y-break nil))))))))
 
@@ -676,8 +680,8 @@
 
   (define-global main (args)
     (let arg (hd args)
-      (if (or (string= arg "-h")
-              (string= arg "--help"))
+      (if (or (= arg "-h")
+              (= arg "--help"))
           (usage)
         (let (pre ()
               input nil
@@ -687,22 +691,22 @@
               n (\# args))
           (for i n
             (let a (at args i)
-              (if (or (string= a "-c")
-                      (string= a "-o")
-                      (string= a "-e"))
+              (if (or (= a "-c")
+                      (= a "-o")
+                      (= a "-e"))
                   (if (= i (- n 1))
                       (print (format "missing argument for %S" a))
                     (progn (inc i)
                            (let val (at args i)
-                             (if (string= a "-c") (set input val)
-                                 (string= a "-o") (set output val)
-                                 (string= a "-e") (set expr val)))))
+                             (if (= a "-c") (set input val)
+                                 (= a "-o") (set output val)
+                                 (= a "-e") (set expr val)))))
                 (add pre a))))
           (step file pre
             (run-file file))
           (if (nil? input) (if expr (rep expr) (repl))
             (let code (compile-file input)
-              (if (or (nil? output) (string= output "-"))
+              (if (or (nil? output) (= output "-"))
                   (print code)
                 (write-file output code))))))))
 
