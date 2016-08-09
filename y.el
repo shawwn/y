@@ -377,7 +377,7 @@
 
   (define id (x)
     (let s (append (if (symbolp x) (symbol-name x) x) nil)
-      (when (eq ?? (get s (edge s)))
+      (when (= ?? (get s (edge s)))
         (if (memq ?- s)
             (progn (set (get s (edge s)) ?-)
                    (set (get s (\# s)) ?p))
@@ -393,7 +393,7 @@
 
   (define global-id (prefix name)
     (let s (if (stringp name) name (symbol-name name))
-      (if (eq 0 (string-match (regexp-quote prefix) s))
+      (if (= 0 (string-match (regexp-quote prefix) s))
           name
         (id (concat prefix s)))))
 
@@ -408,7 +408,7 @@
 
   (define symbol? (k)
     (let v (symbol-expansion k)
-      (and v (not (eq v k)))))
+      (and v (not (= v k)))))
 
   (define variable? (k)
     (let i (edge environment)
@@ -476,8 +476,8 @@
       (if s (macroexpand s)
         (if (atom form) form
           (let x (macroexpand (hd form))
-            (if (eq x 'quote) form
-                (eq x '\`)
+            (if (= x 'quote) form
+                (= x '\`)
                 (macroexpand (funcall 'macroexpand form))
                 (macro? x)
                 (macroexpand (apply (macro-function x) (tl form)))
