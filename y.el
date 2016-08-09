@@ -488,15 +488,15 @@
            (max-specpdl-size 13350))
       (funcall 'eval (macroexpand form) t)))
 
-  (define expand-if ((a b :rest c))
-    (if (some? c) `((%if ,a ,b ,@(expand-if c)))
-        (is? b) `((%if ,a ,b))
-        (is? a) (list a)))
-
   (define-macro = args
     (if (find 'stringp args)
         `(string= ,@args)
       `(eql ,@args)))
+
+  (define expand-if ((a b :rest c))
+    (if (some? c) `((%if ,a ,b ,@(expand-if c)))
+        (is? b) `((%if ,a ,b))
+        (is? a) (list a)))
 
   (define-macro if branches
     (hd (expand-if branches)))
