@@ -652,7 +652,7 @@
       (with-temp-buffer
         (insert ";;; -*- lexical-binding: t -*-\n")
         (insert (with-output-to-string
-                  (pp exprs)))
+                  (prin1 exprs)))
         (untabify (point-min) (point-max))
         (buffer-string))))
 
