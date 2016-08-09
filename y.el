@@ -179,6 +179,7 @@
 
 (defmacro y-do (&rest body)
   (let* ((max-lisp-eval-depth 4450)
+         (max-specpdl-size 13350)
          (y-environment (apply 'vector (append y-environment nil))))
     (macroexp-progn (mapcar 'y-macroexpand body))))
 
@@ -484,7 +485,9 @@
               (cons x (mapcar 'y-macroexpand (tl form)))))))))
 
   (define-global eval (form)
-    (funcall 'eval (macroexpand form) t))
+    (let* ((max-lisp-eval-depth 4450)
+           (max-specpdl-size 13350))
+      (funcall 'eval (macroexpand form) t)))
 
   (define expand-if ((a b :rest c))
     (if (some? c) `((%if ,a ,b ,@(expand-if c)))
