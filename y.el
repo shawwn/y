@@ -244,7 +244,10 @@
       (substring s i j)))
 
   (define chop? (x from upto)
-    (and (consp x) (= from 1) (null upto) (not (keywordp (car x)))))
+    (and (consp x)
+         (= from 1)
+         (null upto)
+         (not (keywordp (car x)))))
 
   (define-global cut (x &optional from upto)
     (if (chop? x from upto)
@@ -698,9 +701,7 @@
               n (\# args))
           (for i n
             (let a (at args i)
-              (if (or (= a "-c")
-                      (= a "-o")
-                      (= a "-e"))
+              (if (or (= a "-c") (= a "-o") (= a "-e"))
                   (if (= i (- n 1))
                       (print (format "missing argument for %S" a))
                     (progn (inc i)
