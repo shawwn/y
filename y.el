@@ -527,14 +527,14 @@
     (let var (global-id (concat (module-name) "--") name)
       (setenv name :symbol var)
       (setenv var :variable t)
-      `(progn (defalias ',var (fn ,x ,@body))
+      `(prog1 (defalias ',var (fn ,x ,@body))
               (setenv ',name :symbol ',var))))
 
   (define-macro define-global (name x :rest body)
     (let var (global-id (concat (module-name) "-") name)
       (setenv name :symbol var)
       (setenv var :variable t :toplevel t)
-      `(progn (defalias ',var (fn ,x ,@body))
+      `(prog1 (defalias ',var (fn ,x ,@body))
               (setenv ',name :symbol ',var))))
 
   (define-macro with-frame body
