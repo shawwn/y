@@ -384,10 +384,10 @@
           (set (get s (edge s)) ?p)))
       (intern (concat s))))
 
-  (defvar y-module nil)
+  (define-global module)
 
   (define module-name ()
-    (or y-module
+    (or module
         (let file (or load-file-name (buffer-file-name))
           (if file (file-name-base file) (buffer-name)))))
 
@@ -523,19 +523,26 @@
     (setenv name :symbol expansion)
     `(setenv ',name :symbol ',expansion))
 
-  (define-macro define (name x :rest body)
-    (let var (global-id (concat (module-name) "--") name)
-      (setenv name :symbol var)
-      (setenv var :variable t)
-      `(prog1 (defalias ',var (fn ,x ,@body))
-              (setenv ',name :symbol ',var))))
+  (define expand-definition (name x body global?)
+    (let (sep (if global? "-" "--")
+          name1 (global-id (concat (module-name) sep) name)
+          body1 (keep (fn (x) (not (stringp x))) body)
+          fn? (some? body1)
+          var (if global? 'defvar 'defconst))
+      (if global?
+          (setenv name1 :variable t :toplevel t)
+        (setenv name1 :variable t))
+      (setenv name :symbol name1)
+      `(progn ,(if fn?
+                 `(defalias ',name1 (fn ,x ,@body))
+                 `(,var ,name1 ,x ,@body))
+              (setenv ',name :symbol ',name1))))
 
-  (define-macro define-global (name x :rest body)
-    (let var (global-id (concat (module-name) "-") name)
-      (setenv name :symbol var)
-      (setenv var :variable t :toplevel t)
-      `(prog1 (defalias ',var (fn ,x ,@body))
-              (setenv ',name :symbol ',var))))
+  (define-macro define (name &optional x &rest body)
+    (expand-definition name x body nil))
+
+  (define-macro define-global (name &optional x &rest body)
+    (expand-definition name x body t))
 
   (define-macro with-frame body
     (let-unique (x)
@@ -651,7 +658,7 @@
 
   (define-global compile-file (path &optional module-name)
     (let* ((name (or module-name (file-name-base path)))
-           (y-module name)
+           (module name)
            (forms (with-temp-buffer
                     (insert-file-contents-literally path)
                     (car (read-from-string (concat "(" (buffer-string) ")")))))
