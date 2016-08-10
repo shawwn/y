@@ -533,7 +533,7 @@
           (setenv name1 :variable t :toplevel t)
         (setenv name1 :variable t))
       (setenv name :symbol name1)
-      `(progn ,(if fn?
+      `(prog1 ,(if fn?
                  `(defalias ',name1 (fn ,x ,@body))
                  `(,var ,name1 ,x ,@body))
               (setenv ',name :symbol ',name1))))
