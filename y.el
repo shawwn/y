@@ -359,7 +359,6 @@
   (define-global keys? (l)
     (catch 'y-break
       (each (k v) l
-        (setq v v)
         (unless (number? k)
           (throw 'y-break t)))
       nil))
@@ -367,7 +366,6 @@
   (define-global empty? (l)
     (catch 'y-break
       (each x l
-        (setq x x)
         (throw 'y-break nil))
       t))
 
