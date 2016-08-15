@@ -227,7 +227,7 @@
 
   (define-global type (x) (type-of x))
 
-  (define-global number? (x) (or (integerp x) (numberp x)))
+  (define-global number? (x) (numberp x))
 
   (define-global obj? (x) (hash-table-p x))
 
