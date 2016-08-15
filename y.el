@@ -360,14 +360,14 @@
     (catch 'y-break
       (each (k v) l
         (unless (number? k)
-          (throw 'y-break t)))
+          (throw 'y-break 't)))
       nil))
 
   (define-global empty? (l)
     (catch 'y-break
       (each x l
         (throw 'y-break nil))
-      t))
+      't))
 
   (define-global toplevel? ()
     (one? environment))
@@ -485,7 +485,7 @@
   (define-global eval (form)
     (let* ((max-lisp-eval-depth 4450)
            (max-specpdl-size 13350))
-      (funcall 'eval (macroexpand form) t)))
+      (funcall 'eval (macroexpand form) 't)))
 
   (define-macro = args
     (if (find 'stringp args)
@@ -529,8 +529,8 @@
           fn? (some? body1)
           var (if global? 'defvar 'defconst))
       (if global?
-          (setenv name1 :variable t :toplevel t)
-        (setenv name1 :variable t))
+          (setenv name1 :variable 't :toplevel 't)
+        (setenv name1 :variable 't))
       (setenv name :symbol name1)
       `(prog1 ,(if fn?
                  `(defalias ',name1 (fn ,x ,@body))
@@ -541,7 +541,7 @@
     (expand-definition name x body nil))
 
   (define-macro define-global (name &optional x &rest body)
-    (expand-definition name x body t))
+    (expand-definition name x body 't))
 
   (define-macro with-frame body
     (let-unique (x)
@@ -576,7 +576,7 @@
               (let var1 (unique var)
                 (set renames (list var var1))
                 (set var var1))
-            (setenv var :variable t))
+            (setenv var :variable 't))
           (let form `(let ,(join bs1 bs2) ,@body)
             (unless (none? renames)
               (set form `(let-symbol ,renames ,form)))
@@ -649,7 +649,7 @@
                       (princ "> "))))
         (princ "> ")
         (catch 'y-break
-          (while t
+          (while 't
             (let s (read-from-minibuffer "")
               (if (and s (not (= s ":a")))
                   (funcall rep1 (concat s "\n"))
