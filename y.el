@@ -433,7 +433,7 @@
                        `(cut ,var ,(\# lh))
                      `(get ,var ',k))
               (when (is? k)
-                (let k (if (= v t) k v)
+                (let k (if (= v 't) k v)
                   (join! bs (bind k x))))))))))
 
   (define-global bind* (args body)
@@ -453,7 +453,7 @@
           (unless (or (number? k) (= k 'rest))
             (when (nil? rest)
               (set rest (unique 'args)))
-            (let (v1 (if (= v t) k v)
+            (let (v1 (if (= v 't) k v)
                   k1 (intern (format ":%s" k)))
                (join! ks (list k1 v1)))))
         (when rest
