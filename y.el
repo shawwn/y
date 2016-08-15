@@ -424,7 +424,7 @@
         (symbol? x)
         (variable? x)))
 
-  (define bind (lh rh)
+  (define-global bind (lh rh)
     (if (atom? lh) `(,lh ,rh)
       (let-unique (var)
         (with bs (list var rh)
@@ -436,7 +436,7 @@
                 (let k (if (= v t) k v)
                   (join! bs (bind k x))))))))))
 
-  (define bind* (args body)
+  (define-global bind* (args body)
     (if (and args (atom? args))
         (bind* `(&rest ,args) body)
       (let (rest nil args1 () bs () ks ())
