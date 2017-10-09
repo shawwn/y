@@ -300,20 +300,13 @@
       (funcall f (hd x) (reduce f (tl x)))))
 
   (define-global join ls
-    (if (two? ls)
-        (let ((a b) ls)
-          (if (and a b)
-              (let (c (if (obj? a) (obj) ())
-                    o (\# a))
-                (each (k v) a
-                  (set (get c k) v))
-                (each (k v) b
-                  (when (number? k)
-                    (inc k o))
-                  (set (get c k) v))
-                c)
-            (or a b ())))
-      (or (reduce 'y-join ls) ())))
+    (with r ()
+      (step l ls
+        (when l
+          (let n (\# r)
+            (each (k v) l
+              (if (number? k) (inc k n))
+              (set (get r k) v)))))))
 
   (define-global find (f l)
     (catch 'y-break
