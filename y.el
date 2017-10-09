@@ -234,6 +234,9 @@
   (define-macro obj ()
     `(make-hash-table :test 'eq))
 
+  (define-global dup (x)
+    (if (obj? x) (obj) ()))
+
   (define-global atom? (x)
     (or (nil? x) (symbolp x) (stringp x) (number? x)))
 
@@ -244,7 +247,7 @@
       (substring s i j)))
 
   (define-global cut (x &optional from upto)
-    (with l (if (obj? x) (obj) ())
+    (with l (dup x)
       (let (j 0
             i (if (or (nil? from) (< from 0)) 0 from)
             n (\# x)
@@ -258,7 +261,7 @@
             (set (get l k) v))))))
 
   (define-global keys (x)
-    (with l (if (obj? x) (obj) ())
+    (with l (dup x)
       (each (k v) x
         (unless (number? k)
           (set (get l k) v)))))
@@ -300,7 +303,7 @@
       (funcall f (hd x) (reduce f (tl x)))))
 
   (define-global join ls
-    (with r ()
+    (with r (dup (hd ls))
       (step l ls
         (when l
           (let n (\# r)
@@ -324,14 +327,14 @@
     (find (fn (y) (= x y)) l))
 
   (define-global pair (l)
-    (with l1 (if (obj? l) (obj) ())
+    (with l1 (dup l)
       (let n (\# l)
         (for i n
           (add l1 (list (at l i) (at l (+ i 1))))
           (inc i)))))
 
   (define-global map (f x)
-    (with l (if (obj? x) (obj) ())
+    (with l (dup x)
       (step v x
         (let y (funcall f v)
           (if (is? y)
