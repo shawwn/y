@@ -513,8 +513,18 @@
   (define-macro fn (args :rest body)
     `(lambda ,@(bind* args body)))
 
+  (define body-macro? (args)
+    (= 'body (if (atom? args) args (car (funcall 'last args)))))
+
+  (define body-indentation (name args form)
+    (if (body-macro? args)
+        `(prog1 ,form
+           (function-put ',name 'lisp-indent-function 'defun))
+      form))
+
   (define-macro define-macro (name args :rest body)
-    (let* ((form `(setenv ',name :macro (fn ,args ,@body))))
+    (let* ((form `(setenv ',name :macro (fn ,args ,@body)))
+           (form (body-indentation name args form)))
       (eval form)
       form))
 
