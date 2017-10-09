@@ -243,27 +243,19 @@
           j (if (or (nil? upto) (> upto n)) n (max upto i)))
       (substring s i j)))
 
-  (define chop? (x from upto)
-    (and (consp x)
-         (= from 1)
-         (null upto)
-         (not (keywordp (car x)))))
-
   (define-global cut (x &optional from upto)
-    (if (chop? x from upto)
-        (cdr x)
-      (with l (if (obj? x) (obj) ())
-        (let (j 0
-              i (if (or (nil? from) (< from 0)) 0 from)
-              n (\# x)
-              upto (if (or (nil? upto) (> upto n)) n upto))
-          (while (< i upto)
-            (set (at l j) (at x i))
-            (inc i)
-            (inc j))
-          (each (k v) x
-            (unless (number? k)
-              (set (get l k) v)))))))
+    (with l (if (obj? x) (obj) ())
+      (let (j 0
+            i (if (or (nil? from) (< from 0)) 0 from)
+            n (\# x)
+            upto (if (or (nil? upto) (> upto n)) n upto))
+        (while (< i upto)
+          (set (at l j) (at x i))
+          (inc i)
+          (inc j))
+        (each (k v) x
+          (unless (number? k)
+            (set (get l k) v))))))
 
   (define-global keys (x)
     (with l (if (obj? x) (obj) ())
@@ -274,7 +266,11 @@
   (define-global edge (x)
     (- (\# x) 1))
 
-  (define-global tl (l) (cut l 1))
+  (define chop? (x)
+    (and (listp x) (not (keywordp (car x)))))
+
+  (define-global tl (l)
+    (if (chop? l) (cdr l) (cut l 1)))
 
   (define-global last (l)
     (at l (edge l)))
