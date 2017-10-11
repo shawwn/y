@@ -649,6 +649,14 @@
                   (funcall rep1 (concat s "\n"))
                 (throw 'y-break nil))))))))
 
+  (define-global compile-toplevel (form)
+    (let ((x :macro macro?) (if (atom? form) (list) form))
+      (if (= x 'defalias) (terpri)
+          (= x 'y-setenv) (if macro? (terpri)))
+      (if (= x 'progn) (map #'compile-toplevel (tl form))
+          (= x 'prog1) (map #'compile-toplevel (tl form))
+        (prog1 (prin1 form) (terpri)))))
+
   (define-global compile-file (path &optional module-name)
     (let* ((name (or module-name (file-name-base path)))
            (module name)
@@ -659,7 +667,7 @@
       (with-temp-buffer
         (insert ";;; -*- lexical-binding: t -*-\n")
         (insert (with-output-to-string
-                  (prin1 exprs)))
+                  (compile-toplevel exprs)))
         (untabify (point-min) (point-max))
         (buffer-string))))
 
