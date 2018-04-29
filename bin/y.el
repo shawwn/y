@@ -1,6 +1,7 @@
 ;;; -*- lexical-binding: t -*-
 (quote nil)
 (set (make-local-variable (quote lexical-binding)) t)
+(setq inhibit-eol-conversion t)
 (quote cl)
 (or lexical-binding (signal (quote cl-assertion-failed) (list (quote lexical-binding))))
 nil
