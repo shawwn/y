@@ -26,3 +26,4 @@ then
 fi
 
 exec ${host} ${debug} ${opts} "${code}" "$@"
+ECHO is on.

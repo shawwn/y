@@ -13,3 +13,4 @@ clean:
 bin/%.el : %.el
 	@echo $@
 	@$(Y) -c $< -o $@
+ECHO is on.
