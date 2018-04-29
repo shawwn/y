@@ -1,16 +1,18 @@
 ;;; -*- lexical-binding: t -*-
 
-(eval-and-compile
+(eval-when-compile
   (let* ((input (or load-file-name (buffer-file-name))))
     (when (and input (file-exists-p input))
       (let* ((name (file-name-base input))
              (dir (file-name-directory input))
              (output (expand-file-name (concat "bin/" name ".el") dir)))
         (when (file-exists-p output)
-          (load-file output)
-          (unless y-module
-            (when (file-newer-than-file-p input output)
-              (y-write-file output (y-compile-file input name))))))))
+          (let ((noninteractive nil))
+            (unless (featurep 'y)
+              (load-file output))
+            (unless y-module
+              (when (file-newer-than-file-p input output)
+                (y-write-file output (y-compile-file input name)))))))))
   nil)
 
 (setq-local lexical-binding t)
