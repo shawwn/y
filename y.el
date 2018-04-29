@@ -673,7 +673,7 @@
 
   (define-global write-file (path data)
     (with-temp-buffer
-      (insert data)
+      (insert (replace-regexp-in-string "\r" "" data))
       (write-region (point-min) (point-max) path nil t)))
 
   (define run-file (path)
