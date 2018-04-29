@@ -296,4 +296,3 @@ nil
 (y-setenv (quote main) :symbol (quote y-main))
 (if noninteractive (progn (let* ((args command-line-args-left)) (progn (setq command-line-args-left nil) (y-main args)))))
 (provide (quote y))
-ECHO is on.
