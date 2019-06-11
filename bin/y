@@ -12,8 +12,15 @@ elif emacs --version > /dev/null 2>&1
 then
     host=emacs
 else
-    echo "no host found. (Is emacs version >= 24 on your PATH?)"
+    1>&2 echo "no host found. (Is emacs version >= 24 on your PATH?)"
     exit 1
+fi
+
+version=$(emacs --version | sed 's/GNU Emacs \([0-9.]*\).*/\1/g' | grep '^[0-9]\+' -o)
+if [ $version -lt 24 ]
+then
+    1>&2 echo "emacs version >= 24 is required, but you have emacs version ${version}"
+    exit 2
 fi
 
 debug="${Y_DEBUG:+-f toggle-debug-on-error}"
